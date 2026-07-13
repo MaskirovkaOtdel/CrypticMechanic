@@ -75,7 +75,7 @@ function App() {
       {/* ─── HEADER ─── */}
       <header className="app-header">
         <div className="brand">
-          <img src="/icon.png" alt="CrypticMechanic" className="brand-logo" />
+          <img src="./icon.png" alt="CrypticMechanic" className="brand-logo" />
           <span className="brand-text">CrypticMechanic</span>
           <span className="brand-tag">AI</span>
         </div>

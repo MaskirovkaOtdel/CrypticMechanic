@@ -100,8 +100,8 @@ To access customization options, click the **Settings (Gear)** icon in the top h
 - **Model Choice**:
   - `gemini-2.0-flash-lite` (Recommended / Cheapest / Fast)
   - `gemini-2.0-flash`
-  - `gemini-1.5-flash`
-  - `gemini-1.5-pro` (Detailed analysis)
+  - `gemini-2.5-flash`
+  - `gemini-2.5-pro` (Detailed analysis)
 - **Prompt Customizer**: Adjust the sliders and dropdowns to modify the system prompt. The app dynamically rewrites instruction structures based on your choices.
 
 ---

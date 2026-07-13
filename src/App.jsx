@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings, Sparkles, FileTerminal, AlertCircle,
   Download, Terminal, Key
@@ -6,7 +6,7 @@ import {
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
 import { translateError } from './lib/gemini';
-import { loadSettings, saveSettings } from './components/SettingsPanel';
+import { loadSettings, saveSettings } from './lib/settings';
 import './App.css';
 
 function App() {

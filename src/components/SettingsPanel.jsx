@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { X, Key, SlidersHorizontal } from 'lucide-react';
 import ThemeSwitcher from './ThemeSwitcher';
 
@@ -12,48 +11,9 @@ const MODEL_OPTIONS = [
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Most Capable)' },
 ];
 
-const DEFAULT_SETTINGS = {
-  apiKey: '',
-  detail: 'Standard',
-  format: 'Diagnosis + Fixes',
-  tone: 'Professional',
-  model: 'gemini-2.0-flash-lite',
-  theme: 'midnight-terminal',
-};
-
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem('CM_SETTINGS');
-    if (saved) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-    }
-    // Migrate old API key if present
-    const oldKey = localStorage.getItem('GEMINI_API_KEY');
-    if (oldKey) {
-      return { ...DEFAULT_SETTINGS, apiKey: oldKey };
-    }
-  } catch { /* ignore */ }
-  return { ...DEFAULT_SETTINGS };
-}
-
-function saveSettings(settings) {
-  localStorage.setItem('CM_SETTINGS', JSON.stringify(settings));
-}
-
-export { loadSettings, saveSettings, DEFAULT_SETTINGS };
-
 export default function SettingsPanel({ isOpen, onClose, settings, onSettingsChange }) {
-  const [localSettings, setLocalSettings] = useState(settings);
-
-  useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings, isOpen]);
-
   const update = (key, value) => {
-    const next = { ...localSettings, [key]: value };
-    setLocalSettings(next);
-    onSettingsChange(next);
-    saveSettings(next);
+    onSettingsChange({ ...settings, [key]: value });
   };
 
   return (
@@ -81,7 +41,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
               type="password"
               className="input-field"
               placeholder="Paste your API key here..."
-              value={localSettings.apiKey}
+              value={settings.apiKey}
               onChange={(e) => update('apiKey', e.target.value)}
             />
           </div>
@@ -92,7 +52,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
             <p className="setting-desc">Cheaper models use less of your free-tier quota.</p>
             <select
               className="select-field"
-              value={localSettings.model}
+              value={settings.model}
               onChange={(e) => update('model', e.target.value)}
             >
               {MODEL_OPTIONS.map(m => (
@@ -108,7 +68,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
               {DETAIL_OPTIONS.map(opt => (
                 <button
                   key={opt}
-                  className={localSettings.detail === opt ? 'active' : ''}
+                  className={settings.detail === opt ? 'active' : ''}
                   onClick={() => update('detail', opt)}
                 >
                   {opt}
@@ -124,7 +84,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
               {FORMAT_OPTIONS.map(opt => (
                 <button
                   key={opt}
-                  className={localSettings.format === opt ? 'active' : ''}
+                  className={settings.format === opt ? 'active' : ''}
                   onClick={() => update('format', opt)}
                 >
                   {opt}
@@ -140,7 +100,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
               {TONE_OPTIONS.map(opt => (
                 <button
                   key={opt}
-                  className={localSettings.tone === opt ? 'active' : ''}
+                  className={settings.tone === opt ? 'active' : ''}
                   onClick={() => update('tone', opt)}
                 >
                   {opt}
@@ -151,7 +111,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
 
           {/* Theme */}
           <ThemeSwitcher
-            currentTheme={localSettings.theme}
+            currentTheme={settings.theme}
             onThemeChange={(t) => update('theme', t)}
           />
         </div>

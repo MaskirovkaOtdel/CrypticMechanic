@@ -1,4 +1,3 @@
-import React from 'react';
 import { Monitor, Flame, Cpu, MonitorX, Sun } from 'lucide-react';
 
 const themes = [

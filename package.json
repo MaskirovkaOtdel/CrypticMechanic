@@ -4,7 +4,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Translate cryptic developer error logs into human-readable diagnoses and actionable fixes.",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",

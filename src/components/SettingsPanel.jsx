@@ -1,17 +1,24 @@
-import { X, Key, SlidersHorizontal } from 'lucide-react';
+import { X, Key, SlidersHorizontal, Trash2, Database } from 'lucide-react';
 import ThemeSwitcher from './ThemeSwitcher';
 
 const DETAIL_OPTIONS = ['Concise', 'Standard', 'Thorough'];
 const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quick Fix'];
 const TONE_OPTIONS = ['Professional', 'Friendly', 'ELI5'];
 const MODEL_OPTIONS = [
-  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (Cheapest)' },
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (Cheapest & Fastest)' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Most Capable)' },
 ];
 
-export default function SettingsPanel({ isOpen, onClose, settings, onSettingsChange }) {
+export default function SettingsPanel({
+  isOpen,
+  onClose,
+  settings,
+  onSettingsChange,
+  historyCount = 0,
+  onClearHistory,
+}) {
   const update = (key, value) => {
     onSettingsChange({ ...settings, [key]: value });
   };
@@ -25,7 +32,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
       <div className={`settings-panel ${isOpen ? 'open' : ''}`}>
         <div className="settings-header">
           <h2><SlidersHorizontal size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />Settings</h2>
-          <button className="btn-icon" onClick={onClose}>
+          <button className="btn-icon" onClick={onClose} aria-label="Close Settings">
             <X size={20} />
           </button>
         </div>
@@ -35,7 +42,7 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
           <div className="setting-group">
             <label><Key size={12} style={{ marginRight: 4 }} />Gemini API Key</label>
             <p className="setting-desc">
-              Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Google AI Studio</a>. Stored locally only.
+              Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Google AI Studio</a>. Stored locally only in your browser/app.
             </p>
             <input
               type="password"
@@ -114,6 +121,33 @@ export default function SettingsPanel({ isOpen, onClose, settings, onSettingsCha
             currentTheme={settings.theme}
             onThemeChange={(t) => update('theme', t)}
           />
+
+          {/* History / Privacy */}
+          <div className="setting-group" style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
+            <label><Database size={12} style={{ marginRight: 4 }} />Privacy & History</label>
+            <p className="setting-desc">
+              Store recent analyses on this machine to easily reference past errors.
+            </p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', textTransform: 'none', color: 'var(--text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={settings.saveHistory !== false}
+                onChange={(e) => update('saveHistory', e.target.checked)}
+                style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+              />
+              Record translations to local history ({historyCount} saved)
+            </label>
+            {historyCount > 0 && onClearHistory && (
+              <button
+                className="btn-secondary"
+                onClick={onClearHistory}
+                style={{ marginTop: '8px', width: 'fit-content', color: 'var(--error)' }}
+              >
+                <Trash2 size={13} />
+                Clear Local History
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </>

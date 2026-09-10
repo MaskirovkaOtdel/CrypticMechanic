@@ -81,15 +81,35 @@ ${logs}
  * Translate error logs using the Gemini API.
  */
 export async function translateError(logs, settings) {
-  const { apiKey, model } = settings;
+  const apiKey = (settings.apiKey || '').trim();
+  const { model } = settings;
 
-  if (!apiKey) throw new Error('No API key configured. Open Settings to add your Gemini API key.');
+  if (!apiKey) {
+    throw new Error('No API key configured. Open Settings (⚙) to add your Gemini API key.');
+  }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const genModel = genAI.getGenerativeModel({ model: model || 'gemini-2.0-flash-lite' });
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const genModel = genAI.getGenerativeModel({ model: model || 'gemini-2.0-flash-lite' });
 
-  const prompt = buildPrompt(logs, settings);
-  const result = await genModel.generateContent(prompt);
-  const response = result.response;
-  return response.text();
+    const prompt = buildPrompt(logs, settings);
+    const result = await genModel.generateContent(prompt);
+    const response = result.response;
+    return response.text();
+  } catch (err) {
+    const rawMsg = err?.message || String(err);
+
+    // Provide friendly, actionable errors for common API pitfalls
+    if (rawMsg.includes('API_KEY_INVALID') || (rawMsg.includes('400') && rawMsg.includes('API key'))) {
+      throw new Error('Invalid API key. Please check your Gemini API key in Settings.', { cause: err });
+    }
+    if (rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('429')) {
+      throw new Error('Gemini API quota exceeded (Rate Limit / 429). Please wait a few moments or switch to a lighter model (e.g. Gemini 2.0 Flash Lite) in Settings.', { cause: err });
+    }
+    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('network') || rawMsg.includes('NetworkError')) {
+      throw new Error('Network connection failed. Please verify your internet connection and try again.', { cause: err });
+    }
+
+    throw new Error(rawMsg || 'Translation failed. Check your API key and try again.', { cause: err });
+  }
 }

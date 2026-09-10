@@ -468,7 +468,7 @@ function App() {
         <span>
           Model: {activeModelDisplay} · {settings.detail} · {settings.tone}
         </span>
-        <span>CrypticMechanic v1.0.1</span>
+        <span>CrypticMechanic v1.1.0</span>
       </div>
 
       {/* ─── HISTORY DRAWER ─── */}

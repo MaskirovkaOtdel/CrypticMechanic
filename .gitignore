@@ -55,3 +55,6 @@ Desktop.ini
 .env.test.local
 .env.production.local
 *.env.json
+
+# Agent rules & conversation artifacts
+.agents/

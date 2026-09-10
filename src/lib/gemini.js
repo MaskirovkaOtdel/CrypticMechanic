@@ -5,9 +5,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  */
 export function resolveModelName(settings = {}) {
   if (settings.model === 'custom') {
-    return (settings.customModel || '').trim() || 'gemini-2.5-flash';
+    return (settings.customModel || '').trim() || 'gemini-3-flash';
   }
-  return settings.model || 'gemini-2.5-flash';
+  return settings.model || 'gemini-3-flash';
 }
 
 /**
@@ -138,7 +138,7 @@ function handleGeminiError(err, modelName = '') {
   }
   if (lowerMsg.includes('resource_exhausted') || lowerMsg.includes('429')) {
     throw new Error(
-      'Gemini API quota exceeded (Rate Limit / 429). Please wait a few moments or switch to a lighter model (e.g. Gemini 2.5 Flash Lite) in Settings.',
+      'Gemini API quota exceeded (Rate Limit / 429). Please wait a few moments or switch to a lighter model (e.g. Gemini 3 Flash or Gemini 2.5 Flash Lite) in Settings.',
       { cause: err }
     );
   }

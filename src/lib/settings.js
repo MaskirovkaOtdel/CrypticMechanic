@@ -3,7 +3,7 @@ export const DEFAULT_SETTINGS = {
   detail: 'Standard',
   format: 'Diagnosis + Fixes',
   tone: 'Professional',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3-flash',
   customModel: '',
   theme: 'midnight-terminal',
   saveHistory: true,
@@ -17,9 +17,9 @@ export function loadSettings() {
     const saved = localStorage.getItem('CM_SETTINGS');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate legacy default model to current standard default
-      if (parsed.model === 'gemini-2.0-flash-lite') {
-        parsed.model = 'gemini-2.5-flash';
+      // Migrate legacy default models to current standard default
+      if (parsed.model === 'gemini-2.0-flash-lite' || parsed.model === 'gemini-2.5-flash') {
+        parsed.model = 'gemini-3-flash';
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }

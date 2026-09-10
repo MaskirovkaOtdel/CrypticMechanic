@@ -16,7 +16,9 @@ import { SAMPLE_ERRORS } from './lib/sampleErrors';
 import './App.css';
 
 function formatModelBadge(modelName) {
-  if (!modelName) return '2.5 Flash';
+  if (!modelName) return '3 Flash';
+  if (modelName === 'gemini-3-flash') return '3 Flash';
+  if (modelName === 'gemini-3-pro') return '3 Pro';
   if (modelName === 'gemini-2.5-flash') return '2.5 Flash';
   if (modelName === 'gemini-2.5-flash-lite') return '2.5 Flash Lite';
   if (modelName === 'gemini-2.5-pro') return '2.5 Pro';

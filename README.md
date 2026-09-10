@@ -115,10 +115,11 @@ To access customization options, click the **Settings (Gear)** icon in the top h
   - Use the eye toggle button to view or obscure your key.
   - Your key is stored locally in your browser/app's `localStorage` and is never shared or transmitted anywhere else except directly to Google's API endpoint.
 - **Model Choice**:
-  - `gemini-2.5-flash` (Default / Recommended - Fast & Balanced)
-  - `gemini-2.5-flash-lite` (Cheapest & Ultra-Fast)
-  - `gemini-2.5-pro` (Deep Reasoning / Complex Stack Traces)
-  - `gemini-2.0-flash` (Legacy GA)
+  - `gemini-3-flash` (Default / Recommended - Fastest & Next-Gen)
+  - `gemini-3-pro` (Deepest Reasoning / Complex Stack Traces)
+  - `gemini-2.5-flash` (Balanced & Fast)
+  - `gemini-2.5-flash-lite` (Cheapest)
+  - `gemini-2.5-pro` (High Capability)
   - `Custom Model ID...` (Enter any custom model name)
 - **Prompt Customizer**: Adjust the Detail Level, Response Format, and Tone to modify the system prompt.
 

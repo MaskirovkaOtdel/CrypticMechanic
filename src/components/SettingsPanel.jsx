@@ -7,10 +7,11 @@ const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quic
 const TONE_OPTIONS = ['Professional', 'Friendly', 'ELI5'];
 
 const MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Recommended - Fast & Balanced)' },
-  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (Cheapest & Ultra-Fast)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Deep Reasoning / Stack Traces)' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Legacy GA)' },
+  { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Recommended - Fastest & Next-Gen)' },
+  { value: 'gemini-3-pro', label: 'Gemini 3 Pro (Deepest Reasoning & Complex Stacks)' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Balanced & Fast)' },
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (Cheapest)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (High Capability)' },
   { value: 'custom', label: 'Custom Model ID...' },
 ];
 
@@ -95,7 +96,7 @@ export default function SettingsPanel({
           {/* Model */}
           <div className="setting-group">
             <label>AI Model</label>
-            <p className="setting-desc">Select an active Gemini 2.5 model or enter a custom model identifier.</p>
+            <p className="setting-desc">Select a Gemini 3 or 2.5 series model or enter a custom model identifier.</p>
             <select
               className="select-field"
               value={selectedModelValue}

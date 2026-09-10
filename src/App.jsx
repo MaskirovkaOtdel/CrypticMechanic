@@ -6,13 +6,24 @@ import {
 } from 'lucide-react';
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
-import { translateError } from './lib/gemini';
+import { copyTextToClipboard } from './lib/clipboard';
+import { translateErrorStream, resolveModelName } from './lib/gemini';
 import {
   loadSettings, saveSettings,
-  loadHistory, saveHistoryItem, clearHistory
+  loadHistory, saveHistoryItem, deleteHistoryItem, clearHistory
 } from './lib/settings';
 import { SAMPLE_ERRORS } from './lib/sampleErrors';
 import './App.css';
+
+function formatModelBadge(modelName) {
+  if (!modelName) return '2.5 Flash';
+  if (modelName === 'gemini-2.5-flash') return '2.5 Flash';
+  if (modelName === 'gemini-2.5-flash-lite') return '2.5 Flash Lite';
+  if (modelName === 'gemini-2.5-pro') return '2.5 Pro';
+  if (modelName === 'gemini-2.0-flash') return '2.0 Flash';
+  if (modelName === 'gemini-2.0-flash-lite') return '2.0 Flash Lite';
+  return modelName.replace(/^gemini-/, '');
+}
 
 function App() {
   const [settings, setSettings] = useState(loadSettings);
@@ -25,11 +36,26 @@ function App() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
   }, [settings.theme]);
+
+  // Global Escape shortcut to close drawers
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isSettingsOpen || isHistoryOpen) {
+          setIsSettingsOpen(false);
+          setIsHistoryOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, isHistoryOpen]);
 
   // PWA install prompt
   useEffect(() => {
@@ -58,6 +84,12 @@ function App() {
     setHistory([]);
   };
 
+  const handleDeleteHistory = (e, id) => {
+    e.stopPropagation();
+    const updated = deleteHistoryItem(id);
+    setHistory(updated);
+  };
+
   const handlePasteClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -71,13 +103,24 @@ function App() {
 
   const handleCopyResult = async () => {
     if (!result) return;
-    try {
-      await navigator.clipboard.writeText(result);
+    const success = await copyTextToClipboard(result);
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
     }
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!result) return;
+    const blob = new Blob([result], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'CrypticMechanic-Analysis.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSelectSample = (sampleLog) => {
@@ -104,15 +147,25 @@ function App() {
     setError('');
     setResult('');
 
-    try {
-      const response = await translateError(logs, settings);
-      setResult(response);
+    let streamBuffer = '';
+    const activeModel = resolveModelName(settings);
 
-      if (settings.saveHistory !== false) {
+    try {
+      const finalResponse = await translateErrorStream(logs, settings, (accumulated) => {
+        streamBuffer = accumulated;
+        setResult(accumulated);
+      });
+
+      const outcome = finalResponse || streamBuffer;
+      if (outcome) {
+        setResult(outcome);
+      }
+
+      if (settings.saveHistory !== false && outcome) {
         const updated = saveHistoryItem({
           logs,
-          result: response,
-          model: settings.model,
+          result: outcome,
+          model: activeModel,
         });
         setHistory(updated);
       }
@@ -124,7 +177,61 @@ function App() {
     }
   };
 
+  const handleTextareaKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (!isLoading && logs.trim()) {
+        handleTranslate();
+      }
+    }
+  };
+
+  // Drag-and-drop log file loading with boundary check & binary/size safety
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget)) {
+      return;
+    }
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('The dropped file exceeds the 5 MB limit. Please provide a smaller log excerpt.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result;
+        if (typeof content === 'string') {
+          if (content.slice(0, 4096).includes('\0')) {
+            setError('The dropped file appears to be a binary file. Please drop a plain text or log file.');
+            return;
+          }
+          setLogs(content);
+          setError('');
+        }
+      };
+      reader.onerror = () => {
+        setError('Failed to read the dropped file. Please try again.');
+      };
+      reader.readAsText(file);
+    }
+  };
+
   const hasApiKey = Boolean(settings.apiKey);
+  const charCount = logs.length;
+  const tokenCount = charCount > 0 ? Math.ceil(charCount / 4) : 0;
+  const activeModelDisplay = resolveModelName(settings);
 
   return (
     <div className="app-container">
@@ -223,12 +330,28 @@ function App() {
             </div>
           </div>
 
-          <textarea
-            className="log-textarea"
-            placeholder="Paste your cryptic stack trace, terminal output, or error log here... or select a preset above."
-            value={logs}
-            onChange={(e) => setLogs(e.target.value)}
-          />
+          <div
+            className={`textarea-wrapper ${isDragging ? 'drag-over' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <textarea
+              className="log-textarea"
+              placeholder="Paste your cryptic stack trace, terminal output, or error log here... or drag & drop a log file, or select a preset above. (Ctrl+Enter to Translate)"
+              value={logs}
+              onChange={(e) => setLogs(e.target.value)}
+              onKeyDown={handleTextareaKeyDown}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            />
+            {isDragging && (
+              <div className="drag-drop-overlay">
+                <FileTerminal size={36} />
+                <span>Drop log file here to load</span>
+              </div>
+            )}
+          </div>
 
           <div className="input-footer">
             <button
@@ -248,7 +371,9 @@ function App() {
                 </>
               )}
             </button>
-            <span className="char-count">{logs.length.toLocaleString()} chars</span>
+            <span className="char-count">
+              {charCount.toLocaleString()} chars (~{tokenCount.toLocaleString()} tokens)
+            </span>
           </div>
         </section>
 
@@ -260,28 +385,38 @@ function App() {
               Analysis
             </div>
             {result && (
-              <button
-                className="btn-secondary copy-btn"
-                onClick={handleCopyResult}
-                title="Copy full analysis markdown"
-              >
-                {copied ? (
-                  <>
-                    <Check size={13} style={{ color: 'var(--success)' }} />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy size={13} />
-                    Copy
-                  </>
-                )}
-              </button>
+              <div className="toolbar-actions">
+                <button
+                  className="btn-secondary copy-btn"
+                  onClick={handleCopyResult}
+                  title="Copy full analysis markdown"
+                >
+                  {copied ? (
+                    <>
+                      <Check size={13} style={{ color: 'var(--success)' }} />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      Copy Markdown
+                    </>
+                  )}
+                </button>
+                <button
+                  className="btn-secondary copy-btn"
+                  onClick={handleDownloadMarkdown}
+                  title="Download analysis as CrypticMechanic-Analysis.md"
+                >
+                  <Download size={13} />
+                  Download .md
+                </button>
+              </div>
             )}
           </div>
 
           <div className="output-body">
-            {isLoading ? (
+            {isLoading && !result ? (
               <div className="loading-container">
                 <div className="loading-dots">
                   <span></span><span></span><span></span>
@@ -295,18 +430,33 @@ function App() {
                 {!hasApiKey && (
                   <p className="error-hint">
                     You can get a free API key from{' '}
-                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent)' }}
+                    >
                       Google AI Studio
                     </a>
                   </p>
                 )}
               </div>
             ) : result ? (
-              <MarkdownRenderer content={result} />
+              <div className="analysis-result-wrapper">
+                <MarkdownRenderer content={result} />
+                {isLoading && (
+                  <span className="streaming-cursor" title="Streaming generation...">
+                    ▋
+                  </span>
+                )}
+              </div>
             ) : (
               <div className="output-empty">
                 <FileTerminal size={44} className="pulse" />
-                <p>Paste an error log on the left or try one of the <strong>Presets</strong>, then hit <strong>Translate</strong>.</p>
+                <p>
+                  Paste an error log on the left, drag & drop a log file, or try one of the{' '}
+                  <strong>Presets</strong>, then hit <strong>Translate</strong>.
+                </p>
               </div>
             )}
           </div>
@@ -315,7 +465,9 @@ function App() {
 
       {/* ─── STATUS BAR ─── */}
       <div className="status-bar">
-        <span>Model: {settings.model} · {settings.detail} · {settings.tone}</span>
+        <span>
+          Model: {activeModelDisplay} · {settings.detail} · {settings.tone}
+        </span>
         <span>CrypticMechanic v1.0.1</span>
       </div>
 
@@ -326,10 +478,27 @@ function App() {
       />
       <div className={`history-panel ${isHistoryOpen ? 'open' : ''}`}>
         <div className="settings-header">
-          <h2><History size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />Recent History</h2>
-          <button className="btn-icon" onClick={() => setIsHistoryOpen(false)} aria-label="Close history">
-            <X size={20} />
-          </button>
+          <h2>
+            <History size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+            Recent History
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {history.length > 0 && (
+              <button
+                type="button"
+                className="btn-icon"
+                onClick={handleClearHistory}
+                title="Clear all history"
+                aria-label="Clear all history"
+                style={{ color: 'var(--error)' }}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+            <button className="btn-icon" onClick={() => setIsHistoryOpen(false)} aria-label="Close history">
+              <X size={20} />
+            </button>
+          </div>
         </div>
         <div className="history-body">
           {history.length === 0 ? (
@@ -345,10 +514,30 @@ function App() {
                   onClick={() => handleLoadHistoryItem(item)}
                 >
                   <div className="history-card-header">
-                    <span className="history-card-date">
-                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(item.timestamp).toLocaleDateString()}
-                    </span>
-                    <ArrowRight size={14} className="history-card-icon" />
+                    <div className="history-card-meta">
+                      <span className="history-model-badge">
+                        {formatModelBadge(item.model)}
+                      </span>
+                      <span className="history-card-date">
+                        {new Date(item.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}{' '}
+                        · {new Date(item.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="history-card-actions">
+                      <button
+                        type="button"
+                        className="history-delete-btn"
+                        onClick={(e) => handleDeleteHistory(e, item.id)}
+                        title="Delete this history item"
+                        aria-label="Delete history item"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                      <ArrowRight size={14} className="history-card-icon" />
+                    </div>
                   </div>
                   <pre className="history-card-preview">{item.logs.slice(0, 100).trim()}...</pre>
                 </div>

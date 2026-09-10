@@ -458,6 +458,7 @@ body {
   line-height: 1.75;
 }
 
+.markdown-container h2,
 .markdown-container h3 {
   display: flex;
   align-items: center;
@@ -470,20 +471,163 @@ body {
   letter-spacing: 0.04em;
 }
 
+.markdown-container h2:first-child,
 .markdown-container h3:first-child {
   margin-top: 0;
 }
 
-.diagnosis-section h3 {
+.diagnosis-section,
+.diagnosis-section h2,
+.diagnosis-section h3,
+h2.diagnosis-header,
+h3.diagnosis-header,
+h2.diagnosis-section,
+h3.diagnosis-section {
   color: var(--diagnosis-border);
   padding-bottom: 8px;
   border-bottom: 2px solid var(--diagnosis-border);
 }
 
-.fixes-section h3 {
+.fixes-section,
+.fixes-section h2,
+.fixes-section h3,
+h2.fixes-header,
+h3.fixes-header,
+h2.fixes-section,
+h3.fixes-section {
   color: var(--fixes-border);
   padding-bottom: 8px;
   border-bottom: 2px solid var(--fixes-border);
+}
+
+/* ============================================
+   DARK TERMINAL CODE BLOCK CONTAINER (WCAG Safe)
+   ============================================ */
+
+.code-block-container {
+  background: #14161f;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  margin: 16px 0;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="clean-room"] .code-block-container {
+  background: #14161f;
+  border: 1px solid rgba(20, 22, 31, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.code-block-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #8b8fa8;
+}
+
+[data-theme="clean-room"] .code-block-badge {
+  color: #94a3b8;
+}
+
+.code-copy-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #8b8fa8;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   TASK LIST CHECKBOX STYLING
+   ============================================ */
+
+.task-list-item {
+  list-style: none !important;
+  margin-bottom: 10px;
+  padding-left: 0 !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.task-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-glass-active);
+  border-radius: 5px;
+  background: var(--code-bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 3px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.task-checkbox:hover {
+  border-color: var(--accent);
+}
+
+.task-checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.task-checkbox:checked::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
+
+.task-content {
+  flex: 1;
+  user-select: text;
+  transition: opacity 0.2s ease, text-decoration 0.2s ease, color 0.2s ease;
+}
+
+.task-content p {
+  margin-bottom: 0;
+}
+
+.task-list-item.completed .task-content {
+  text-decoration: line-through;
+  opacity: 0.65;
 }
 
 .markdown-container p {

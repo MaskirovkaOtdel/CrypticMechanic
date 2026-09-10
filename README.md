@@ -14,19 +14,35 @@ Available as both a responsive Web Application (with full PWA support) and a lig
 
 ## ✨ Features
 
-- **Intuitive UI/UX**: Paste your raw logs and get a side-by-side or clean stacked layout showing a precise **Diagnosis** and a checkable list of **Actionable Fixes**.
+- **Intuitive UI/UX & Real-Time Streaming**: Paste your raw logs and watch diagnoses stream in live with `generateContentStream`. Side-by-side or clean stacked layout highlights a focused **Diagnosis** and a checkable list of **Actionable Fixes**.
+- **Interactive Checklists**: Markdown task checkboxes (`- [ ]` / `- [x]`) are fully interactive toggles so developers can tick off steps as bugs are resolved.
+- **Enhanced Code Blocks**:
+  - Language badge headers (`BASH`, `JAVASCRIPT`, `DOCKERFILE`, etc.).
+  - Dedicated per-code-block copy buttons with immediate visual feedback (`Copied!`).
+  - Dark terminal container (`#14161f`) with high WCAG contrast across all themes, including Clean Room (light mode).
+- **Workflow & Ergonomics**:
+  - **Drag-and-Drop**: Drop `.log` or `.txt` files directly onto the log input area.
+  - **Keyboard Shortcuts**: `Ctrl+Enter` (or `Cmd+Enter`) in the log input triggers translation; `Escape` closes open drawers.
+  - **Export Options**: One-click "Copy Markdown" and "Download .md" (`CrypticMechanic-Analysis.md`).
+  - **Token Estimator**: Real-time character and token counter (e.g. `1,200 chars (~300 tokens)`).
 - **Highly Customisable Outputs**: Customise how your responses are generated via the settings panel:
-  - **Detail Level**: Choose between *Concise* (fast checklist), *Balanced*, or *Exhaustive* (deep explanation).
-  - **Response Style**: Toggle between *Technical/Actionable*, *Explain Like I'm Five (ELI5)*, or *Mentor/Educational*.
-  - **Response Tone**: Match your mood with *Troubleshooter* (professional), *Encouraging*, or *Humorous* logs translator.
+  - **Detail Level**: Choose between *Concise* (fast checklist), *Standard*, or *Thorough* (deep explanation).
+  - **Response Format**: Toggle between *Diagnosis + Fixes*, *Step-by-Step*, *Root Cause*, or *Quick Fix*.
+  - **Response Tone**: Match your style with *Professional*, *Friendly*, or *ELI5*.
 - **5 Premium CompSci & SWE Themes**:
   - 🌌 **Midnight Terminal** (Default) – Sleek, high-contrast dark theme.
   - 🚨 **Kernel Panic** – Vibrant, error-state dark theme with deep crimson accents.
   - 📟 **Circuit Board** – Classic matrix-green console vibe.
   - 🟦 **Blue Screen** – Nostalgic retro BSOD crash theme.
-  - 🥼 **Clean Room** – Sleek, premium light theme for crisp day reading.
-- **Model Control**: Switch models based on your pricing and preference. Defaults to `gemini-2.0-flash-lite` for the most cost-effective and lightning-fast translations.
-- **Dual API Access**: Run out of the box using built-in free-tier settings, or supply your own private Google Gemini API Key (stored safely in your local browser/app environment).
+  - 🥼 **Clean Room** – Sleek, premium light theme for crisp day reading with dark terminal code blocks.
+- **Latest Gemini 2.5 Model Lineup**:
+  - `gemini-2.5-flash` (Default / Recommended - Fast & Balanced)
+  - `gemini-2.5-flash-lite` (Cheapest & Ultra-Fast)
+  - `gemini-2.5-pro` (Deep Reasoning / Complex Stack Traces)
+  - `gemini-2.0-flash` (Legacy GA)
+  - **Custom Model ID**: Type any model identifier (e.g. `gemini-3.1-pro`, `gemini-2.5-flash-preview`) to keep the app future-proof.
+- **Deterministic Troubleshooting**: Configured with `temperature: 0.2` and native `systemInstruction` parameters for consistent, accurate fixes.
+- **Local History with Model Badges**: Browse recent translations with model badge pills (e.g. `2.5 Flash`) and delete individual items or clear history.
 - **Offline & Desktop Native**:
   - **Electron Portable App**: Downloadable, zero-install portable `.exe` executable for Windows.
   - **PWA Ready**: Installable directly onto your system from Chromium-based browsers.
@@ -35,10 +51,10 @@ Available as both a responsive Web Application (with full PWA support) and a lig
 
 ## 🛠️ Tech Stack
 
-- **Frontend Core**: React 19, Vite 8, Javascript (ESM)
-- **Styling**: Vanilla CSS with custom properties (CSS variables) for robust real-time theme swapping.
+- **Frontend Core**: React 19, Vite 8, JavaScript (ESM)
+- **Styling**: Vanilla CSS with custom properties (CSS variables) for real-time theme swapping.
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **Markdown Rendering**: `react-markdown` with code syntax highlighting using `react-syntax-highlighter` (prism styling).
+- **Markdown Rendering**: `react-markdown` with syntax highlighting via `react-syntax-highlighter` (Prism `oneDark`).
 - **AI Integration**: Google Generative AI SDK (`@google/generative-ai`)
 - **Desktop Wrapper**: Electron 36 & `electron-builder`
 
@@ -94,20 +110,22 @@ The resulting executable will be saved in the `release/` directory. Double-click
 
 To access customization options, click the **Settings (Gear)** icon in the top header.
 
-- **API Key**: 
-  - By default, the app can run using a built-in proxy key (subject to rate limits and availability).
-  - For unlimited personal usage, obtain a free API key from the [Google AI Studio](https://aistudio.google.com/) and paste it into the field. Your key is stored locally in your app's localStorage and is never shared or transmitted anywhere else except directly to Google's API endpoint.
+- **API Key**:
+  - Obtain a free API key from [Google AI Studio](https://aistudio.google.com/apikey) and paste it into the field.
+  - Use the eye toggle button to view or obscure your key.
+  - Your key is stored locally in your browser/app's `localStorage` and is never shared or transmitted anywhere else except directly to Google's API endpoint.
 - **Model Choice**:
-  - `gemini-2.0-flash-lite` (Recommended / Cheapest / Fast)
-  - `gemini-2.0-flash`
-  - `gemini-2.5-flash`
-  - `gemini-2.5-pro` (Detailed analysis)
-- **Prompt Customizer**: Adjust the sliders and dropdowns to modify the system prompt. The app dynamically rewrites instruction structures based on your choices.
+  - `gemini-2.5-flash` (Default / Recommended - Fast & Balanced)
+  - `gemini-2.5-flash-lite` (Cheapest & Ultra-Fast)
+  - `gemini-2.5-pro` (Deep Reasoning / Complex Stack Traces)
+  - `gemini-2.0-flash` (Legacy GA)
+  - `Custom Model ID...` (Enter any custom model name)
+- **Prompt Customizer**: Adjust the Detail Level, Response Format, and Tone to modify the system prompt.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](file:///c:/Users/User/Desktop/CrypticMechanic/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 Developed with 💻 by **Thodoris Efstathiadis** (`MaskirovkaOtdel`).

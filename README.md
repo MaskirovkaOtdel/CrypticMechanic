@@ -14,8 +14,12 @@ Available as both a responsive Web Application (with full PWA support) and a lig
 
 ## ✨ Features
 
+- **Modular Provider Architecture & Extension Engine**:
+  - Pluggable AI engine layer (`src/lib/providers/AIProvider.js`) cleanly decoupling the UI from inference backends.
+  - Universal provider registry (`src/lib/providers/providerRegistry.js`) for seamless runtime selection across cloud and local providers.
+  - Zero-merge-conflict dynamic extension auto-discovery (`src/lib/extensionRegistry.js`) allowing downstream capabilities without modifying core files.
 - **Intuitive UI/UX & Real-Time Streaming**: Paste your raw logs and watch diagnoses stream in live with `generateContentStream`. Side-by-side or clean stacked layout highlights a focused **Diagnosis** and a checkable list of **Actionable Fixes**.
-- **Interactive Checklists**: Markdown task checkboxes (`- [ ]` / `- [x]`) are fully interactive toggles so developers can tick off steps as bugs are resolved.
+- **Interactive Checklists**: Markdown task checkboxes (`- [ ]` / `- [x]`) are fully interactive toggles so developers can tick off steps as bugs are resolved directly within the diagnostic output.
 - **Enhanced Code Blocks**:
   - Language badge headers (`BASH`, `JAVASCRIPT`, `DOCKERFILE`, etc.).
   - Dedicated per-code-block copy buttons with immediate visual feedback (`Copied!`).
@@ -35,14 +39,15 @@ Available as both a responsive Web Application (with full PWA support) and a lig
   - 📟 **Circuit Board** – Classic matrix-green console vibe.
   - 🟦 **Blue Screen** – Nostalgic retro BSOD crash theme.
   - 🥼 **Clean Room** – Sleek, premium light theme for crisp day reading with dark terminal code blocks.
-- **Latest Gemini 2.5 Model Lineup**:
-  - `gemini-2.5-flash` (Default / Recommended - Fast & Balanced)
-  - `gemini-2.5-flash-lite` (Cheapest & Ultra-Fast)
-  - `gemini-2.5-pro` (Deep Reasoning / Complex Stack Traces)
-  - `gemini-2.0-flash` (Legacy GA)
-  - **Custom Model ID**: Type any model identifier (e.g. `gemini-3.1-pro`, `gemini-2.5-flash-preview`) to keep the app future-proof.
+- **Next-Gen Gemini 3 & 2.5 Model Lineup**:
+  - `gemini-3-flash` (Default / Recommended – Next-gen speed and surgical reasoning)
+  - `gemini-3-pro` (Deepest reasoning & complex multi-file stack traces)
+  - `gemini-2.5-flash` (Balanced & fast)
+  - `gemini-2.5-flash-lite` (Cheapest & ultra-fast)
+  - `gemini-2.5-pro` (High capability)
+  - **Custom Model ID**: Type any model identifier (e.g. `gemini-3.1-pro`) to keep the app future-proof.
 - **Deterministic Troubleshooting**: Configured with `temperature: 0.2` and native `systemInstruction` parameters for consistent, accurate fixes.
-- **Local History with Model Badges**: Browse recent translations with model badge pills (e.g. `2.5 Flash`) and delete individual items or clear history.
+- **Local History with Model Badges**: Browse recent translations with model badge pills (e.g. `3 Flash`, `3 Pro`) and delete individual items or clear history.
 - **Offline & Desktop Native**:
   - **Electron Portable App**: Downloadable, zero-install portable `.exe` executable for Windows.
   - **PWA Ready**: Installable directly onto your system from Chromium-based browsers.
@@ -52,10 +57,11 @@ Available as both a responsive Web Application (with full PWA support) and a lig
 ## 🛠️ Tech Stack
 
 - **Frontend Core**: React 19, Vite 8, JavaScript (ESM)
+- **Architecture**: Pluggable `AIProvider` base class, dynamic `providerRegistry`, and zero-conflict `extensionRegistry` auto-discovery
 - **Styling**: Vanilla CSS with custom properties (CSS variables) for real-time theme swapping.
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Markdown Rendering**: `react-markdown` with syntax highlighting via `react-syntax-highlighter` (Prism `oneDark`).
-- **AI Integration**: Google Generative AI SDK (`@google/generative-ai`)
+- **AI Integration**: Google Generative AI SDK (`@google/generative-ai`) with real-time streaming
 - **Desktop Wrapper**: Electron 36 & `electron-builder`
 
 ---
@@ -110,6 +116,8 @@ The resulting executable will be saved in the `release/` directory. Double-click
 
 To access customization options, click the **Settings (Gear)** icon in the top header.
 
+- **AI Provider**:
+  - Choose between active providers registered in the engine (Google Gemini Cloud default, with dynamic extension support).
 - **API Key**:
   - Obtain a free API key from [Google AI Studio](https://aistudio.google.com/apikey) and paste it into the field.
   - Use the eye toggle button to view or obscure your key.

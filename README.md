@@ -27,8 +27,9 @@ Available as both a responsive Web Application (with full PWA support) and a lig
 - **Workflow & Ergonomics**:
   - **Drag-and-Drop**: Drop `.log` or `.txt` files directly onto the log input area.
   - **Keyboard Shortcuts**: `Ctrl+Enter` (or `Cmd+Enter`) in the log input triggers translation; `Escape` closes open drawers.
-  - **Export Options**: One-click "Copy Markdown" and "Download .md" (`CrypticMechanic-Analysis.md`).
+  - **Export Options**: One-click "Copy Markdown", "Export as GitHub Issue" (generates ready-to-paste markdown issue template with collapsible raw logs `<details>` and actionable checkboxes), and "Download .md" (`CrypticMechanic-Analysis.md`).
   - **Token Estimator**: Real-time character and token counter (e.g. `1,200 chars (~300 tokens)`).
+  - **9 Polyglot Error Presets**: Instant one-click test logs covering Node.js (`MODULE_NOT_FOUND`), Docker port conflicts, Python `KeyError`, Git merge conflicts, Rust borrow checker, Kubernetes Pod `CrashLoopBackOff` & `OOMKilled` (Exit 137), Go runtime nil pointer dereference panic, Spring Boot `UnsatisfiedDependencyException`, and C++/GDB `SIGSEGV` segmentation faults.
 - **Highly Customisable Outputs**: Customise how your responses are generated via the settings panel:
   - **Detail Level**: Choose between *Concise* (fast checklist), *Standard*, or *Thorough* (deep explanation).
   - **Response Format**: Toggle between *Diagnosis + Fixes*, *Step-by-Step*, *Root Cause*, or *Quick Fix*.

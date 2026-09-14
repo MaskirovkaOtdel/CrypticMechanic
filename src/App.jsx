@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Settings, Sparkles, FileTerminal, AlertCircle,
   Download, Terminal, Key, Copy, Check, Trash2,
-  History, ClipboardPaste, ArrowRight, BookOpen, X
+  History, ClipboardPaste, ArrowRight, BookOpen, X, Bug
 } from 'lucide-react';
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
@@ -42,6 +42,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedIssue, setCopiedIssue] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -114,6 +115,39 @@ function App() {
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleExportGitHubIssue = async () => {
+    if (!result) return;
+    const issueTemplate = [
+      '## 🐛 Bug Report / Diagnostic Summary',
+      '',
+      '### 📋 Diagnosis & Root Cause',
+      result.trim(),
+      '',
+      '<details>',
+      '<summary><b>🔍 Raw Error Logs</b></summary>',
+      '',
+      '```',
+      logs.trim(),
+      '```',
+      '',
+      '</details>',
+      '',
+      '### ✅ Action Checklist',
+      '- [ ] Verify error context against diagnosis assumptions',
+      '- [ ] Apply suggested fix / configuration change',
+      '- [ ] Re-run command or test suite to confirm resolution',
+      '',
+      '---',
+      '_Generated with [CrypticMechanic](https://github.com/MaskirovkaOtdel/CrypticMechanic)_',
+    ].join('\n');
+
+    const success = await copyTextToClipboard(issueTemplate);
+    if (success) {
+      setCopiedIssue(true);
+      setTimeout(() => setCopiedIssue(false), 2000);
     }
   };
 
@@ -419,6 +453,24 @@ function App() {
                     <>
                       <Copy size={13} />
                       Copy Markdown
+                    </>
+                  )}
+                </button>
+                <button
+                  className="btn-secondary copy-btn"
+                  onClick={handleExportGitHubIssue}
+                  title="Export ready-to-paste GitHub Issue template"
+                  aria-label="Export as GitHub Issue"
+                >
+                  {copiedIssue ? (
+                    <>
+                      <Check size={13} style={{ color: 'var(--success)' }} />
+                      Copied Issue!
+                    </>
+                  ) : (
+                    <>
+                      <Bug size={13} />
+                      Export as GitHub Issue
                     </>
                   )}
                 </button>

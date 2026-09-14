@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { X, Key, SlidersHorizontal, Trash2, Database, Eye, EyeOff } from 'lucide-react';
+import { X, Key, SlidersHorizontal, Trash2, Database, Eye, EyeOff, Cpu } from 'lucide-react';
 import ThemeSwitcher from './ThemeSwitcher';
+import { getAllProviders, getActiveProvider } from '../lib/providers/providerRegistry';
+import { getRegisteredSettingsPanels } from '../lib/extensionRegistry';
 
 const DETAIL_OPTIONS = ['Concise', 'Standard', 'Thorough'];
 const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quick Fix'];
@@ -24,6 +26,10 @@ export default function SettingsPanel({
   onClearHistory,
 }) {
   const [showApiKey, setShowApiKey] = useState(false);
+
+  const providers = getAllProviders();
+  const activeProvider = getActiveProvider(settings);
+  const extraPanels = getRegisteredSettingsPanels();
 
   const update = (key, value) => {
     onSettingsChange({ ...settings, [key]: value });
@@ -53,91 +59,129 @@ export default function SettingsPanel({
         </div>
 
         <div className="settings-body">
-          {/* API Key */}
-          <div className="setting-group">
-            <label>
-              <Key size={12} style={{ marginRight: 4 }} />
-              Gemini API Key
-            </label>
-            <p className="setting-desc">
-              Get a free key from{' '}
-              <a
-                href="https://aistudio.google.com/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--accent)' }}
+          {/* Provider Selection (dynamic when multiple providers registered) */}
+          {providers.length > 1 && (
+            <div className="setting-group">
+              <label>
+                <Cpu size={12} style={{ marginRight: 4 }} />
+                AI Provider
+              </label>
+              <p className="setting-desc">Choose between cloud APIs and local offline models.</p>
+              <select
+                className="select-field"
+                value={settings.provider || activeProvider.id}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  const nextProvider = providers.find((p) => p.id === nextId) || activeProvider;
+                  onSettingsChange({
+                    ...settings,
+                    provider: nextId,
+                    model: nextProvider.defaultModel || settings.model,
+                  });
+                }}
               >
-                Google AI Studio
-              </a>
-              . Stored locally only in your browser/app.
-            </p>
-            <div className="api-key-input-wrapper">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                className="input-field api-key-input"
-                placeholder="Paste your API key here..."
-                value={settings.apiKey || ''}
-                onChange={(e) => update('apiKey', e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                className="api-key-toggle-btn"
-                onClick={() => setShowApiKey(!showApiKey)}
-                title={showApiKey ? 'Hide API key' : 'Show API key'}
-                aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-              >
-                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.isLocal ? '(Offline)' : '(Cloud)'}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
+          )}
 
-          {/* Model */}
-          <div className="setting-group">
-            <label>AI Model</label>
-            <p className="setting-desc">Select a Gemini 3 or 2.5 series model or enter a custom model identifier.</p>
-            <select
-              className="select-field"
-              value={selectedModelValue}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'custom') {
-                  update('model', 'custom');
-                } else {
-                  update('model', val);
-                }
-              }}
-            >
-              {MODEL_OPTIONS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+          {/* Provider-specific settings hook */}
+          {typeof activeProvider.renderSettings === 'function' &&
+            activeProvider.renderSettings({ settings, onSettingsChange, update })}
 
-            {selectedModelValue === 'custom' && (
-              <div className="custom-model-wrapper" style={{ marginTop: '8px' }}>
+          {/* API Key (rendered when required by active provider) */}
+          {activeProvider.requiresApiKey && (
+            <div className="setting-group">
+              <label>
+                <Key size={12} style={{ marginRight: 4 }} />
+                {activeProvider.name} API Key
+              </label>
+              <p className="setting-desc">
+                Get a free key from{' '}
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  Google AI Studio
+                </a>
+                . Stored locally only in your browser/app.
+              </p>
+              <div className="api-key-input-wrapper">
                 <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter custom model ID (e.g. gemini-3.1-pro, gemini-2.5-flash-preview)..."
-                  value={customModelValue}
-                  onChange={(e) => {
-                    const nextCustom = e.target.value;
-                    onSettingsChange({
-                      ...settings,
-                      model: 'custom',
-                      customModel: nextCustom,
-                    });
-                  }}
+                  type={showApiKey ? 'text' : 'password'}
+                  className="input-field api-key-input"
+                  placeholder="Paste your API key here..."
+                  value={settings.apiKey || ''}
+                  onChange={(e) => update('apiKey', e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
-                <p className="setting-desc" style={{ marginTop: '4px', fontSize: '11px' }}>
-                  Enter a custom Gemini model identifier (e.g. gemini-3.1-pro). Defaults to gemini-2.5-flash if left blank.
-                </p>
+                <button
+                  type="button"
+                  className="api-key-toggle-btn"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  title={showApiKey ? 'Hide API key' : 'Show API key'}
+                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                >
+                  {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Model selection for Gemini */}
+          {activeProvider.id === 'gemini' && (
+            <div className="setting-group">
+              <label>AI Model</label>
+              <p className="setting-desc">Select a Gemini 3 or 2.5 series model or enter a custom model identifier.</p>
+              <select
+                className="select-field"
+                value={selectedModelValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'custom') {
+                    update('model', 'custom');
+                  } else {
+                    update('model', val);
+                  }
+                }}
+              >
+                {MODEL_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+
+              {selectedModelValue === 'custom' && (
+                <div className="custom-model-wrapper" style={{ marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Enter custom model ID (e.g. gemini-3.1-pro, gemini-2.5-flash-preview)..."
+                    value={customModelValue}
+                    onChange={(e) => {
+                      const nextCustom = e.target.value;
+                      onSettingsChange({
+                        ...settings,
+                        model: 'custom',
+                        customModel: nextCustom,
+                      });
+                    }}
+                  />
+                  <p className="setting-desc" style={{ marginTop: '4px', fontSize: '11px' }}>
+                    Enter a custom Gemini model identifier (e.g. gemini-3.1-pro). Defaults to gemini-2.5-flash if left blank.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Detail Level */}
           <div className="setting-group">
@@ -192,6 +236,17 @@ export default function SettingsPanel({
             currentTheme={settings.theme}
             onThemeChange={(t) => update('theme', t)}
           />
+
+          {/* Extension Settings Panels */}
+          {extraPanels.map((PanelComponent, idx) => (
+            <div key={idx} className="extension-settings-slot">
+              <PanelComponent
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                update={update}
+              />
+            </div>
+          ))}
 
           {/* History / Privacy */}
           <div className="setting-group" style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>

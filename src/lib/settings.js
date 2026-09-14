@@ -1,4 +1,5 @@
 export const DEFAULT_SETTINGS = {
+  provider: 'gemini',
   apiKey: '',
   detail: 'Standard',
   format: 'Diagnosis + Fixes',

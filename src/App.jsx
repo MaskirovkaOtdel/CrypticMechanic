@@ -7,13 +7,18 @@ import {
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
 import { copyTextToClipboard } from './lib/clipboard';
-import { translateErrorStream, resolveModelName } from './lib/gemini';
+import { resolveModelName } from './lib/gemini';
+import { getActiveProvider } from './lib/providers/providerRegistry';
+import { initExtensions, getUIHooks } from './lib/extensionRegistry';
 import {
   loadSettings, saveSettings,
   loadHistory, saveHistoryItem, deleteHistoryItem, clearHistory
 } from './lib/settings';
 import { SAMPLE_ERRORS } from './lib/sampleErrors';
 import './App.css';
+
+// Initialize auto-discovered extensions at startup
+initExtensions();
 
 function formatModelBadge(modelName) {
   if (!modelName) return '3 Flash';
@@ -140,8 +145,10 @@ function App() {
   const handleTranslate = async () => {
     if (!logs.trim()) return;
 
-    if (!settings.apiKey) {
-      setError('No API key configured. Click Settings (⚙) in the top-right to add your Gemini API key.');
+    const activeProvider = getActiveProvider(settings);
+    const configValidation = activeProvider.validateConfig(settings);
+    if (!configValidation.valid) {
+      setError(configValidation.error || 'Invalid configuration. Please check Settings (⚙).');
       return;
     }
 
@@ -150,10 +157,10 @@ function App() {
     setResult('');
 
     let streamBuffer = '';
-    const activeModel = resolveModelName(settings);
+    const activeModel = activeProvider.resolveModel ? activeProvider.resolveModel(settings) : (settings.model || resolveModelName(settings));
 
     try {
-      const finalResponse = await translateErrorStream(logs, settings, (accumulated) => {
+      const finalResponse = await activeProvider.streamAnalyze(logs, settings, (accumulated) => {
         streamBuffer = accumulated;
         setResult(accumulated);
       });
@@ -168,12 +175,13 @@ function App() {
           logs,
           result: outcome,
           model: activeModel,
+          provider: activeProvider.id,
         });
         setHistory(updated);
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Translation failed. Check your API key and try again.');
+      setError(err.message || 'Translation failed. Check your settings and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -230,10 +238,14 @@ function App() {
     }
   };
 
-  const hasApiKey = Boolean(settings.apiKey);
+  const activeProvider = getActiveProvider(settings);
+  const providerValidation = activeProvider.validateConfig(settings);
+  const isConfigValid = providerValidation.valid;
+  const uiHooks = getUIHooks();
+  const customBadge = uiHooks.badges?.[0];
   const charCount = logs.length;
   const tokenCount = charCount > 0 ? Math.ceil(charCount / 4) : 0;
-  const activeModelDisplay = resolveModelName(settings);
+  const activeModelDisplay = activeProvider.resolveModel ? activeProvider.resolveModel(settings) : (settings.model || resolveModelName(settings));
 
   return (
     <div className="app-container">
@@ -242,9 +254,14 @@ function App() {
         <div className="brand">
           <img src="./icon.png" alt="CrypticMechanic" className="brand-logo" />
           <span className="brand-text">CrypticMechanic</span>
-          <span className="brand-tag">AI</span>
+          <span className={`brand-tag ${customBadge?.className || ''}`.trim()}>
+            {customBadge?.text || 'AI'}
+          </span>
         </div>
         <div className="header-actions">
+          {uiHooks.headerActions?.map((ActionComp, i) => (
+            <ActionComp key={i} settings={settings} />
+          ))}
           {deferredPrompt && (
             <button className="btn-secondary" onClick={handleInstallClick}>
               <Download size={14} />
@@ -270,11 +287,11 @@ function App() {
         </div>
       </header>
 
-      {/* ─── NO API KEY BANNER ─── */}
-      {!hasApiKey && (
+      {/* ─── NO API KEY / CONFIG BANNER ─── */}
+      {!isConfigValid && activeProvider.requiresApiKey && (
         <div className="no-key-banner">
           <Key size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-          <span>Add your Gemini API key in Settings to start translating errors.</span>
+          <span>Add your {activeProvider.name} API key in Settings to start translating errors.</span>
           <button className="btn-secondary" onClick={() => setIsSettingsOpen(true)}>
             Open Settings
           </button>
@@ -429,7 +446,7 @@ function App() {
               <div className="output-error">
                 <AlertCircle size={40} className="error-icon" />
                 <p>{error}</p>
-                {!hasApiKey && (
+                {!isConfigValid && activeProvider.requiresApiKey && (
                   <p className="error-hint">
                     You can get a free API key from{' '}
                     <a
@@ -468,9 +485,14 @@ function App() {
       {/* ─── STATUS BAR ─── */}
       <div className="status-bar">
         <span>
-          Model: {activeModelDisplay} · {settings.detail} · {settings.tone}
+          {activeProvider.isLocal ? `${activeProvider.name} · ` : ''}Model: {activeModelDisplay} · {settings.detail} · {settings.tone}
         </span>
-        <span>CrypticMechanic v1.1.0</span>
+        <span>
+          {uiHooks.statusBarItems?.map((ItemComp, i) => (
+            <ItemComp key={i} settings={settings} />
+          ))}
+          CrypticMechanic v1.1.0
+        </span>
       </div>
 
       {/* ─── HISTORY DRAWER ─── */}

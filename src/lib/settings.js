@@ -164,17 +164,21 @@ export function importHistoryFromJSON(jsonString) {
     const existing = loadHistory();
     const existingIds = new Set(existing.map((item) => String(item.id)));
 
-    const validNewItems = parsed
-      .filter((item) => item && typeof item === 'object' && typeof item.logs === 'string')
-      .map((item, idx) => ({
-        id: item.id ? String(item.id) : `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+    const validNewItems = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== 'object' || typeof item.logs !== 'string') continue;
+      const id = item.id ? String(item.id) : `${Date.now()}_${validNewItems.length}_${Math.random().toString(36).slice(2, 6)}`;
+      if (existingIds.has(id)) continue;
+      existingIds.add(id);
+      validNewItems.push({
+        id,
         timestamp: item.timestamp || new Date().toISOString(),
         logs: item.logs,
         result: item.result || item.diagnosis || '',
         model: item.model || 'gemini-3-flash',
         provider: item.provider || 'gemini',
-      }))
-      .filter((item) => !existingIds.has(item.id));
+      });
+    }
 
     const merged = [...validNewItems, ...existing].slice(0, MAX_HISTORY_ITEMS);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));

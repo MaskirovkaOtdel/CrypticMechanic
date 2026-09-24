@@ -3,7 +3,7 @@ import {
   Settings, Sparkles, FileTerminal, AlertCircle,
   Download, Terminal, Key, Copy, Check, Trash2,
   History, ClipboardPaste, ArrowRight, BookOpen, X, Bug,
-  Search, Upload
+  Search, Upload, Wand2
 } from 'lucide-react';
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
@@ -11,6 +11,11 @@ import { copyTextToClipboard } from './lib/clipboard';
 import { resolveModelName } from './lib/gemini';
 import { getActiveProvider } from './lib/providers/providerRegistry';
 import { initExtensions, getUIHooks } from './lib/extensionRegistry';
+import {
+  cleanTerminalNoise,
+  countAnsiCodes,
+  detectLogRuntime,
+} from './lib/logFormatter';
 import {
   loadSettings, saveSettings,
   loadHistory, saveHistoryItem, deleteHistoryItem, clearHistory,
@@ -47,6 +52,33 @@ function App() {
   const [copiedIssue, setCopiedIssue] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [cleanFeedback, setCleanFeedback] = useState(null);
+  const [isOfflineReady, setIsOfflineReady] = useState(() => {
+    return typeof window !== 'undefined' && 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+  });
+
+  // Service worker registration and offline shell readiness check
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => {
+          if (reg && reg.active) {
+            setIsOfflineReady(true);
+          }
+        })
+        .catch(() => {});
+
+      const onControllerChange = () => {
+        if (navigator.serviceWorker.controller) {
+          setIsOfflineReady(true);
+        }
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+      return () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      };
+    }
+  }, []);
 
   // Apply theme to document
   useEffect(() => {
@@ -163,6 +195,19 @@ function App() {
   });
 
   const filteredHistory = filterHistory(history, historySearchQuery, historyModelFilter);
+
+  const handleCleanLogs = () => {
+    if (!logs.trim()) return;
+    const ansiCount = countAnsiCodes(logs);
+    const cleaned = cleanTerminalNoise(logs);
+    const charsSaved = Math.max(0, logs.length - cleaned.length);
+    const tokensSaved = Math.ceil(charsSaved / 4);
+
+    setLogs(cleaned);
+    const feedbackMsg = `Cleaned: ${ansiCount} ANSI code${ansiCount === 1 ? '' : 's'} stripped, saved ~${tokensSaved} token${tokensSaved === 1 ? '' : 's'}`;
+    setCleanFeedback(feedbackMsg);
+    setTimeout(() => setCleanFeedback(null), 4000);
+  };
 
   const handlePasteClipboard = async () => {
     try {
@@ -346,6 +391,7 @@ function App() {
   const charCount = logs.length;
   const tokenCount = charCount > 0 ? Math.ceil(charCount / 4) : 0;
   const activeModelDisplay = activeProvider.resolveModel ? activeProvider.resolveModel(settings) : (settings.model || resolveModelName(settings));
+  const detectedRuntime = detectLogRuntime(logs);
 
   return (
     <div className="app-container">
@@ -408,6 +454,20 @@ function App() {
               Input Logs
             </div>
             <div className="toolbar-actions">
+              {cleanFeedback && (
+                <span className="clean-feedback-pill" title={cleanFeedback}>
+                  {cleanFeedback}
+                </span>
+              )}
+              <button
+                className="btn-text-action btn-clean-logs"
+                onClick={handleCleanLogs}
+                disabled={!logs.trim()}
+                title="Clean ANSI codes, timestamps, and duplicate frames"
+              >
+                <Wand2 size={13} />
+                Clean & Format
+              </button>
               <button
                 className="btn-text-action"
                 onClick={handlePasteClipboard}
@@ -490,9 +550,16 @@ function App() {
                 </>
               )}
             </button>
-            <span className="char-count">
-              {charCount.toLocaleString()} chars (~{tokenCount.toLocaleString()} tokens)
-            </span>
+            <div className="char-count-wrapper">
+              {detectedRuntime && (
+                <span className="runtime-badge-pill" title={`Auto-detected ${detectedRuntime.runtime} runtime`}>
+                  [{detectedRuntime.label || detectedRuntime.runtime}]
+                </span>
+              )}
+              <span className="char-count">
+                {charCount.toLocaleString()} chars (~{tokenCount.toLocaleString()} tokens)
+              </span>
+            </div>
           </div>
         </section>
 
@@ -605,7 +672,13 @@ function App() {
         <span>
           {activeProvider.isLocal ? `${activeProvider.name} · ` : ''}Model: {activeModelDisplay} · {settings.detail} · {settings.tone}
         </span>
-        <span>
+        <span className="status-bar-right">
+          {isOfflineReady && (
+            <span className="offline-status-indicator" title="Service Worker active — Application shell cached for offline use">
+              <span className="offline-status-dot" />
+              Offline Ready
+            </span>
+          )}
           {uiHooks.statusBarItems?.map((ItemComp, i) => (
             <ItemComp key={i} settings={settings} />
           ))}

@@ -85,3 +85,101 @@ export function clearHistory() {
   } catch { /* ignore */ }
   return [];
 }
+
+export function filterHistory(history, query = '', modelFilter = 'All') {
+  if (!Array.isArray(history)) return [];
+  const q = (query || '').trim().toLowerCase();
+  const m = (modelFilter || 'All').trim().toLowerCase();
+
+  return history.filter((item) => {
+    if (!item) return false;
+
+    // Model filter check
+    if (m && m !== 'all') {
+      const itemModel = (item.model || '').toLowerCase();
+      const normalizedBadge = (
+        itemModel === 'gemini-3-flash' ? '3 flash' :
+        itemModel === 'gemini-3-pro' ? '3 pro' :
+        itemModel === 'gemini-2.5-flash' ? '2.5 flash' :
+        itemModel === 'gemini-2.5-flash-lite' ? '2.5 flash lite' :
+        itemModel === 'gemini-2.5-pro' ? '2.5 pro' :
+        itemModel === 'gemini-2.0-flash' ? '2.0 flash' :
+        itemModel === 'gemini-2.0-flash-lite' ? '2.0 flash lite' :
+        itemModel.replace(/^gemini-/, '')
+      ).toLowerCase();
+
+      const matchesModel =
+        itemModel === m ||
+        normalizedBadge === m ||
+        itemModel.includes(m) ||
+        normalizedBadge.includes(m) ||
+        m.includes(normalizedBadge) ||
+        m.includes(itemModel);
+
+      if (!matchesModel) return false;
+    }
+
+    // Query filter check across logs, diagnosis/result, and model name
+    if (q) {
+      const logs = (item.logs || '').toLowerCase();
+      const result = (item.result || item.diagnosis || '').toLowerCase();
+      const model = (item.model || '').toLowerCase();
+      if (!logs.includes(q) && !result.includes(q) && !model.includes(q)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+export function exportHistoryAsJSON(history) {
+  const data = history || loadHistory();
+  const jsonString = JSON.stringify(data, null, 2);
+  if (typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+    try {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `crypticmechanic-history-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // DOM download failed or not permitted in current environment
+    }
+  }
+  return jsonString;
+}
+
+export function importHistoryFromJSON(jsonString) {
+  try {
+    const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+    if (!Array.isArray(parsed)) {
+      throw new Error('Invalid JSON format: expected an array of history items.');
+    }
+    const existing = loadHistory();
+    const existingIds = new Set(existing.map((item) => String(item.id)));
+
+    const validNewItems = parsed
+      .filter((item) => item && typeof item === 'object' && typeof item.logs === 'string')
+      .map((item, idx) => ({
+        id: item.id ? String(item.id) : `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: item.timestamp || new Date().toISOString(),
+        logs: item.logs,
+        result: item.result || item.diagnosis || '',
+        model: item.model || 'gemini-3-flash',
+        provider: item.provider || 'gemini',
+      }))
+      .filter((item) => !existingIds.has(item.id));
+
+    const merged = [...validNewItems, ...existing].slice(0, MAX_HISTORY_ITEMS);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+    return { success: true, count: validNewItems.length, history: merged };
+  } catch (err) {
+    return { success: false, count: 0, error: err.message, history: loadHistory() };
+  }
+}

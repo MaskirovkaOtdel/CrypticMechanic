@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings, Sparkles, FileTerminal, AlertCircle,
   Download, Terminal, Key, Copy, Check, Trash2,
-  History, ClipboardPaste, ArrowRight, BookOpen, X, Bug
+  History, ClipboardPaste, ArrowRight, BookOpen, X, Bug,
+  Search, Upload
 } from 'lucide-react';
 import SettingsPanel from './components/SettingsPanel';
 import MarkdownRenderer from './components/MarkdownRenderer';
@@ -12,7 +13,8 @@ import { getActiveProvider } from './lib/providers/providerRegistry';
 import { initExtensions, getUIHooks } from './lib/extensionRegistry';
 import {
   loadSettings, saveSettings,
-  loadHistory, saveHistoryItem, deleteHistoryItem, clearHistory
+  loadHistory, saveHistoryItem, deleteHistoryItem, clearHistory,
+  filterHistory, exportHistoryAsJSON, importHistoryFromJSON
 } from './lib/settings';
 import { SAMPLE_ERRORS } from './lib/sampleErrors';
 import './App.css';
@@ -87,6 +89,11 @@ function App() {
     saveSettings(next);
   };
 
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyModelFilter, setHistoryModelFilter] = useState('All');
+  const [historyFeedback, setHistoryFeedback] = useState(null);
+  const fileInputRef = useRef(null);
+
   const handleClearHistory = () => {
     clearHistory();
     setHistory([]);
@@ -97,6 +104,65 @@ function App() {
     const updated = deleteHistoryItem(id);
     setHistory(updated);
   };
+
+  const handleExportHistory = () => {
+    if (history.length === 0) {
+      setHistoryFeedback({ type: 'warning', message: 'No history entries to export.' });
+      setTimeout(() => setHistoryFeedback(null), 3000);
+      return;
+    }
+    exportHistoryAsJSON(history);
+    setHistoryFeedback({ type: 'success', message: `Exported ${history.length} item${history.length === 1 ? '' : 's'}.` });
+    setTimeout(() => setHistoryFeedback(null), 3000);
+  };
+
+  const handleImportHistoryFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target.result;
+        const res = importHistoryFromJSON(content);
+        if (res.success !== false) {
+          const updated = loadHistory();
+          setHistory(updated);
+          const count = res.count !== undefined ? res.count : updated.length;
+          setHistoryFeedback({
+            type: 'success',
+            message: `Successfully imported ${count} item${count === 1 ? '' : 's'}.`
+          });
+        } else {
+          setHistoryFeedback({
+            type: 'error',
+            message: res.error || 'Failed to parse JSON history file.'
+          });
+        }
+      } catch (err) {
+        setHistoryFeedback({
+          type: 'error',
+          message: 'Failed to read file: ' + err.message
+        });
+      } finally {
+        setTimeout(() => setHistoryFeedback(null), 4000);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const standardChips = ['All', '3 Flash', '3 Pro', '2.5 Flash'];
+  const dynamicModelChips = Array.from(new Set(
+    history.map((item) => formatModelBadge(item.model)).filter(Boolean)
+  )).filter((badge) => !standardChips.includes(badge));
+  const allModelChips = [...standardChips, ...dynamicModelChips];
+
+  const filterModelOptions = allModelChips.map((chip) => {
+    const count = filterHistory(history, historySearchQuery, chip).length;
+    return { key: chip, label: chip, count };
+  });
+
+  const filteredHistory = filterHistory(history, historySearchQuery, historyModelFilter);
 
   const handlePasteClipboard = async () => {
     try {
@@ -543,7 +609,7 @@ function App() {
           {uiHooks.statusBarItems?.map((ItemComp, i) => (
             <ItemComp key={i} settings={settings} />
           ))}
-          CrypticMechanic v1.1.0
+          CrypticMechanic v1.2.0
         </span>
       </div>
 
@@ -576,14 +642,57 @@ function App() {
             </button>
           </div>
         </div>
+
+        <div className="history-search-container">
+          <div className="history-search-wrapper">
+            <Search size={14} className="history-search-icon" />
+            <input
+              type="text"
+              className="history-search-input"
+              placeholder="Search logs, fixes, or models..."
+              value={historySearchQuery}
+              onChange={(e) => setHistorySearchQuery(e.target.value)}
+              aria-label="Search history"
+            />
+            {historySearchQuery && (
+              <button
+                type="button"
+                className="history-search-clear"
+                onClick={() => setHistorySearchQuery('')}
+                title="Clear search"
+                aria-label="Clear search query"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <div className="history-filter-chips">
+            {filterModelOptions.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                className={`history-filter-chip ${historyModelFilter === opt.key ? 'active' : ''}`}
+                onClick={() => setHistoryModelFilter(opt.key)}
+              >
+                <span>{opt.label}</span>
+                <span className="history-chip-count">{opt.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="history-body">
           {history.length === 0 ? (
             <div className="history-empty">
               <p>No recent translations recorded.</p>
             </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="history-empty">
+              <p>No translations match your search or filter.</p>
+            </div>
           ) : (
             <div className="history-list">
-              {history.map((item) => (
+              {filteredHistory.map((item) => (
                 <div
                   key={item.id}
                   className="history-card"
@@ -620,6 +729,41 @@ function App() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="history-footer">
+          {historyFeedback && (
+            <div className={`history-feedback ${historyFeedback.type}`}>
+              {historyFeedback.message}
+            </div>
+          )}
+          <div className="history-footer-actions">
+            <button
+              type="button"
+              className="history-action-btn"
+              onClick={handleExportHistory}
+              title="Export history as JSON file"
+            >
+              <Download size={14} />
+              Export JSON
+            </button>
+            <button
+              type="button"
+              className="history-action-btn"
+              onClick={() => fileInputRef.current?.click()}
+              title="Import history from JSON file"
+            >
+              <Upload size={14} />
+              Import JSON
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              style={{ display: 'none' }}
+              onChange={handleImportHistoryFile}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { X, Key, SlidersHorizontal, Trash2, Database, Eye, EyeOff, Cpu } from 'lucide-react';
+import { X, Key, SlidersHorizontal, Trash2, Database, Eye, EyeOff, Cpu, Sparkles, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
 import ThemeSwitcher from './ThemeSwitcher';
 import { getAllProviders, getActiveProvider } from '../lib/providers/providerRegistry';
 import { getRegisteredSettingsPanels } from '../lib/extensionRegistry';
+import './SettingsPanel.css';
 
 const DETAIL_OPTIONS = ['Concise', 'Standard', 'Thorough'];
 const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quick Fix'];
@@ -247,6 +248,51 @@ export default function SettingsPanel({
               />
             </div>
           ))}
+
+          {/* Subtle Pro Features Card in Public Edition */}
+          {extraPanels.length === 0 && (
+            <div className="pro-features-card">
+              <div className="pro-card-header">
+                <div className="pro-card-title-group">
+                  <span className="pro-card-title">
+                    <Sparkles size={14} />
+                    CrypticMechanic Pro
+                  </span>
+                </div>
+                <span className="pro-card-badge">Air-Gapped</span>
+              </div>
+              <p className="pro-card-desc">
+                Need zero-data leakage for proprietary codebases or air-gapped networks? Switch to the Local Premium Edition.
+              </p>
+              <ul className="pro-feature-list">
+                <li className="pro-feature-item">
+                  <ShieldCheck size={13} />
+                  <span>100% Offline AI via Ollama &amp; LM Studio</span>
+                </li>
+                <li className="pro-feature-item">
+                  <Zap size={13} />
+                  <span>±15 Lines Source Context Inspection</span>
+                </li>
+                <li className="pro-feature-item">
+                  <ShieldCheck size={13} />
+                  <span>Automated Secret &amp; PII Redactor</span>
+                </li>
+                <li className="pro-feature-item">
+                  <Zap size={13} />
+                  <span>Global Hotkey Daemon (Ctrl+Shift+E)</span>
+                </li>
+              </ul>
+              <a
+                href="https://crypticmechanic.dev/pro"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pro-upgrade-btn"
+              >
+                <span>Upgrade to Pro ($49 Perpetual)</span>
+                <ExternalLink size={13} />
+              </a>
+            </div>
+          )}
 
           {/* History / Privacy */}
           <div className="setting-group" style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>

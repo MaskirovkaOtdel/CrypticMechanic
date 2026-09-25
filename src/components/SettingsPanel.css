@@ -1,0 +1,113 @@
+/* SettingsPanel.css - Styling for Settings Panel and Public Pro Features Card */
+
+.pro-features-card {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  padding: 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(20, 24, 38, 0.85) 0%, rgba(28, 20, 48, 0.75) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pro-features-card:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.15);
+}
+
+.pro-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pro-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pro-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pro-card-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.pro-card-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.pro-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pro-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.pro-feature-item svg {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.pro-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+}
+
+.pro-upgrade-btn:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #4f46e5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.5);
+  color: #ffffff;
+}
+
+.pro-upgrade-btn:active {
+  transform: translateY(0);
+}

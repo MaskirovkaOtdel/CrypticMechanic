@@ -5,36 +5,48 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  */
 export const MODEL_ALIASES = {
   // Gemini 3 series aliases (map shorthand to actual preview endpoint)
+  'gemini-3.5-flash-lite': 'gemini-3.5-flash-lite-preview',
   'gemini-3-flash': 'gemini-3-flash-preview',
+  'gemini-3.5-flash': 'gemini-3.5-flash-preview',
   'gemini-3-pro': 'gemini-3.1-pro-preview',
   'gemini-3.1-pro': 'gemini-3.1-pro-preview',
-  // Deprecated/legacy alias mapping to active equivalents
-  'gemini-2.5-flash-lite': 'gemini-2.5-flash',
-  'gemini-2.0-flash-lite': 'gemini-2.0-flash',
-  'gemini-pro': 'gemini-1.5-pro',
-  'gemini-1.0-pro': 'gemini-1.5-pro',
-  'gemini-1.5-flash-latest': 'gemini-1.5-flash',
-  'gemini-1.5-pro-latest': 'gemini-1.5-pro',
-  'gemini-2.0-flash-exp': 'gemini-2.0-flash',
-  'gemini-exp-1206': 'gemini-2.0-flash',
+  'gemini-3.5-pro': 'gemini-3.5-pro-preview',
+
+  // Transparent migration of legacy/deprecated model IDs directly to modern Gemini 3 default
+  'gemini-2.5-flash': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.0-flash': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.5-pro': 'gemini-3.1-pro-preview',
+  'gemini-1.5-flash': 'gemini-3.5-flash-lite-preview',
+  'gemini-1.5-pro': 'gemini-3.1-pro-preview',
+  'gemini-pro': 'gemini-3.1-pro-preview',
+  'gemini-1.0-pro': 'gemini-3.1-pro-preview',
+  'gemini-1.5-flash-latest': 'gemini-3.5-flash-lite-preview',
+  'gemini-1.5-pro-latest': 'gemini-3.1-pro-preview',
+  'gemini-2.0-flash-exp': 'gemini-3-flash-preview',
+  'gemini-exp-1206': 'gemini-3-flash-preview',
 };
 
 /**
  * Fallback chains when a selected model returns 404 (e.g. preview access not allowlisted).
+ * Exclusively restricted to Gemini 3 family models.
  */
 export const MODEL_FALLBACKS = {
-  'gemini-3-flash-preview': ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
-  'gemini-3-flash': ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
-  'gemini-3.1-pro-preview': ['gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash'],
-  'gemini-3-pro': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash'],
-  'gemini-2.5-pro': ['gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-1.5-flash'],
-  'gemini-1.5-pro': ['gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-2.5-flash'],
-  'gemini-2.5-flash': ['gemini-2.0-flash', 'gemini-1.5-flash'],
-  'gemini-2.0-flash': ['gemini-2.5-flash', 'gemini-1.5-flash'],
-  'gemini-1.5-flash': ['gemini-2.5-flash', 'gemini-2.0-flash'],
+  'gemini-3.5-flash-lite-preview': ['gemini-3-flash-preview', 'gemini-3.5-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.5-flash-lite': ['gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview', 'gemini-3.5-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3-flash-preview': ['gemini-3.5-flash-lite-preview', 'gemini-3.5-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3-flash': ['gemini-3-flash-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3.5-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.5-flash-preview': ['gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.5-flash': ['gemini-3.5-flash-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.1-pro-preview': ['gemini-3.5-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
+  'gemini-3.1-pro': ['gemini-3.1-pro-preview', 'gemini-3.5-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
+  'gemini-3-pro': ['gemini-3.1-pro-preview', 'gemini-3.5-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
+  'gemini-3.5-pro-preview': ['gemini-3.1-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
+  'gemini-3.5-pro': ['gemini-3.5-pro-preview', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
 };
 
-let lastSuccessfulModel = 'gemini-2.5-flash';
+let lastSuccessfulModel = 'gemini-3.5-flash-lite';
 
 export function getLastSuccessfulModel() {
   return lastSuccessfulModel;
@@ -70,10 +82,10 @@ export function isModelUnavailableError(err) {
  */
 export function resolveModelName(settings = {}) {
   let raw = settings.model === 'custom'
-    ? (settings.customModel || '').trim() || 'gemini-2.5-flash'
-    : (settings.model || '').trim() || 'gemini-2.5-flash';
+    ? (settings.customModel || '').trim() || 'gemini-3.5-flash-lite'
+    : (settings.model || '').trim() || 'gemini-3.5-flash-lite';
 
-  // Cross-provider hygiene: If an Ollama or non-Gemini model is set, default to gemini-2.5-flash
+  // Cross-provider hygiene: If an Ollama or non-Gemini model is set, default to gemini-3.5-flash-lite
   if (
     raw.includes(':') ||
     raw.startsWith('llama') ||
@@ -81,7 +93,7 @@ export function resolveModelName(settings = {}) {
     raw.startsWith('mistral') ||
     raw.startsWith('deepseek')
   ) {
-    raw = 'gemini-2.5-flash';
+    raw = 'gemini-3.5-flash-lite';
   }
 
   return MODEL_ALIASES[raw] || raw;

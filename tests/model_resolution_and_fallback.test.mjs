@@ -24,20 +24,28 @@ function test(name, fn) {
 }
 
 // 1. Default settings verification
-test('DEFAULT_SETTINGS uses working production model (gemini-2.5-flash)', () => {
-  assert.equal(DEFAULT_SETTINGS.model, 'gemini-2.5-flash');
+test('DEFAULT_SETTINGS uses working production model (gemini-3.5-flash-lite)', () => {
+  assert.equal(DEFAULT_SETTINGS.model, 'gemini-3.5-flash-lite');
 });
 
 // 2. Out-of-the-box model resolution
-test('Empty or undefined settings resolves to gemini-2.5-flash', () => {
-  assert.equal(resolveModelName({}), 'gemini-2.5-flash');
-  assert.equal(resolveModelName({ model: '' }), 'gemini-2.5-flash');
-  assert.equal(resolveModelName({ model: null }), 'gemini-2.5-flash');
+test('Empty or undefined settings resolves to gemini-3.5-flash-lite', () => {
+  assert.equal(resolveModelName({}), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: '' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: null }), 'gemini-3.5-flash-lite-preview');
 });
 
 // 3. Gemini 3 series alias resolution
+test('gemini-3.5-flash-lite aliases to gemini-3.5-flash-lite-preview', () => {
+  assert.equal(resolveModelName({ model: 'gemini-3.5-flash-lite' }), 'gemini-3.5-flash-lite-preview');
+});
+
 test('gemini-3-flash aliases to gemini-3-flash-preview', () => {
   assert.equal(resolveModelName({ model: 'gemini-3-flash' }), 'gemini-3-flash-preview');
+});
+
+test('gemini-3.5-flash aliases to gemini-3.5-flash-preview', () => {
+  assert.equal(resolveModelName({ model: 'gemini-3.5-flash' }), 'gemini-3.5-flash-preview');
 });
 
 test('gemini-3-pro aliases to gemini-3.1-pro-preview', () => {
@@ -48,29 +56,25 @@ test('gemini-3.1-pro aliases to gemini-3.1-pro-preview', () => {
   assert.equal(resolveModelName({ model: 'gemini-3.1-pro' }), 'gemini-3.1-pro-preview');
 });
 
-// 4. Stable GA models resolution
-test('gemini-2.5-flash resolves directly without distortion', () => {
-  assert.equal(resolveModelName({ model: 'gemini-2.5-flash' }), 'gemini-2.5-flash');
+test('gemini-3.5-pro aliases to gemini-3.5-pro-preview', () => {
+  assert.equal(resolveModelName({ model: 'gemini-3.5-pro' }), 'gemini-3.5-pro-preview');
 });
 
-test('gemini-2.0-flash resolves directly without distortion', () => {
-  assert.equal(resolveModelName({ model: 'gemini-2.0-flash' }), 'gemini-2.0-flash');
-});
-
-test('gemini-1.5-flash resolves directly without distortion', () => {
-  assert.equal(resolveModelName({ model: 'gemini-1.5-flash' }), 'gemini-1.5-flash');
-});
-
-test('gemini-2.5-pro resolves directly without distortion', () => {
-  assert.equal(resolveModelName({ model: 'gemini-2.5-pro' }), 'gemini-2.5-pro');
+// 4. Deprecated legacy models transparently migrate to Gemini 3 family
+test('Deprecated models transparently migrate to Gemini 3 equivalents', () => {
+  assert.equal(resolveModelName({ model: 'gemini-2.5-flash' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'gemini-2.0-flash' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-flash' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'gemini-2.5-pro' }), 'gemini-3.1-pro-preview');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-pro' }), 'gemini-3.1-pro-preview');
 });
 
 // 5. Cross-provider contamination sanitization
-test('Ollama model strings in Gemini settings safely default to gemini-2.5-flash', () => {
-  assert.equal(resolveModelName({ model: 'llama3.2:latest' }), 'gemini-2.5-flash');
-  assert.equal(resolveModelName({ model: 'qwen2.5-coder:7b' }), 'gemini-2.5-flash');
-  assert.equal(resolveModelName({ model: 'deepseek-r1:8b' }), 'gemini-2.5-flash');
-  assert.equal(resolveModelName({ model: 'mistral:latest' }), 'gemini-2.5-flash');
+test('Ollama model strings in Gemini settings safely default to gemini-3.5-flash-lite', () => {
+  assert.equal(resolveModelName({ model: 'llama3.2:latest' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'qwen2.5-coder:7b' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'deepseek-r1:8b' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'mistral:latest' }), 'gemini-3.5-flash-lite-preview');
 });
 
 // 6. Custom model handling
@@ -81,89 +85,80 @@ test('Custom model ID is preserved when model is "custom"', () => {
   );
 });
 
-test('Blank custom model defaults safely to gemini-2.5-flash', () => {
+test('Blank custom model defaults safely to gemini-3.5-flash-lite', () => {
   assert.equal(
     resolveModelName({ model: 'custom', customModel: '   ' }),
-    'gemini-2.5-flash'
+    'gemini-3.5-flash-lite-preview'
   );
 });
 
-// 7. Fallback chains
-test('Fallback candidate list for gemini-3-flash includes stable fallbacks', () => {
+// 7. Fallback chains (strictly Gemini 3 family)
+test('Fallback candidate list for gemini-3.5-flash-lite contains only Gemini 3 models', () => {
+  const candidates = getModelFallbackCandidates('gemini-3.5-flash-lite');
+  assert.deepEqual(candidates, [
+    'gemini-3.5-flash-lite-preview',
+    'gemini-3-flash-preview',
+    'gemini-3.5-flash-preview',
+    'gemini-3.1-pro-preview',
+  ]);
+  // Verify no 2.x or 1.x models exist
+  assert.ok(candidates.every((m) => m.startsWith('gemini-3')));
+});
+
+test('Fallback candidate list for gemini-3-flash contains only Gemini 3 models', () => {
   const candidates = getModelFallbackCandidates('gemini-3-flash');
   assert.deepEqual(candidates, [
     'gemini-3-flash-preview',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
+    'gemini-3.5-flash-lite-preview',
+    'gemini-3.5-flash-preview',
+    'gemini-3.1-pro-preview',
   ]);
-});
-
-test('Fallback candidate list for gemini-2.5-flash includes 2.0 and 1.5 flash', () => {
-  const candidates = getModelFallbackCandidates('gemini-2.5-flash');
-  assert.deepEqual(candidates, [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-  ]);
+  assert.ok(candidates.every((m) => m.startsWith('gemini-3')));
 });
 
 // 8. Preset models catalogue
 test('GEMINI_MODELS catalogue has working default preset', () => {
   const defaultModel = GEMINI_MODELS.find((m) => m.isDefault);
   assert.ok(defaultModel, 'Default model must be marked in GEMINI_MODELS');
-  assert.equal(defaultModel.id, 'gemini-2.5-flash');
+  assert.equal(defaultModel.id, 'gemini-3.5-flash-lite');
 });
 
-test('GEMINI_MODELS contains all core models', () => {
+test('GEMINI_MODELS contains all Gemini 3 family models', () => {
   const ids = GEMINI_MODELS.map((m) => m.id);
-  assert.ok(ids.includes('gemini-2.5-flash'));
-  assert.ok(ids.includes('gemini-2.0-flash'));
-  assert.ok(ids.includes('gemini-1.5-flash'));
-  assert.ok(ids.includes('gemini-2.5-pro'));
-  assert.ok(ids.includes('gemini-1.5-pro'));
+  assert.ok(ids.includes('gemini-3.5-flash-lite'));
   assert.ok(ids.includes('gemini-3-flash'));
-  assert.ok(ids.includes('gemini-3-pro'));
+  assert.ok(ids.includes('gemini-3.5-flash'));
+  assert.ok(ids.includes('gemini-3.1-pro'));
+  assert.ok(ids.includes('gemini-3.5-pro'));
 });
 
-test('filterHistory correctly filters by model and badges including 3.1 pro', () => {
+test('filterHistory correctly filters by model and badges for Gemini 3 family', () => {
   const sampleHistory = [
-    { id: '1', logs: 'err 1', model: 'gemini-2.5-flash', result: 'fix 1' },
-    { id: '2', logs: 'err 2', model: 'gemini-2.0-flash', result: 'fix 2' },
-    { id: '3', logs: 'err 3', model: 'gemini-1.5-flash', result: 'fix 3' },
-    { id: '4', logs: 'err 4', model: 'gemini-3-flash', result: 'fix 4' },
-    { id: '5', logs: 'err 5', model: 'gemini-3.1-pro', result: 'fix 5' },
+    { id: '1', logs: 'err 1', model: 'gemini-3.5-flash-lite', result: 'fix 1' },
+    { id: '2', logs: 'err 2', model: 'gemini-3-flash', result: 'fix 2' },
+    { id: '3', logs: 'err 3', model: 'gemini-3.5-flash', result: 'fix 3' },
+    { id: '4', logs: 'err 4', model: 'gemini-3.1-pro', result: 'fix 4' },
+    { id: '5', logs: 'err 5', model: 'gemini-3.5-pro', result: 'fix 5' },
   ];
 
   assert.equal(filterHistory(sampleHistory, '', 'All').length, 5);
-  assert.equal(filterHistory(sampleHistory, '', '2.5 Flash').length, 1);
-  assert.equal(filterHistory(sampleHistory, '', '2.0 Flash').length, 1);
-  assert.equal(filterHistory(sampleHistory, '', '1.5 Flash').length, 1);
+  assert.equal(filterHistory(sampleHistory, '', '3.5 Flash Lite').length, 1);
   assert.equal(filterHistory(sampleHistory, '', '3 Flash').length, 1);
-  assert.equal(filterHistory(sampleHistory, '', '3 Pro').length, 1);
+  assert.equal(filterHistory(sampleHistory, '', '3.5 Flash').length, 1);
+  assert.equal(filterHistory(sampleHistory, '', '3.1 Pro').length, 1);
+  assert.equal(filterHistory(sampleHistory, '', '3.5 Pro').length, 1);
 });
 
 // 10. Extended aliases resolution
-test('Extended and legacy model aliases resolve properly', () => {
-  assert.equal(resolveModelName({ model: 'gemini-pro' }), 'gemini-1.5-pro');
-  assert.equal(resolveModelName({ model: 'gemini-1.0-pro' }), 'gemini-1.5-pro');
-  assert.equal(resolveModelName({ model: 'gemini-1.5-flash-latest' }), 'gemini-1.5-flash');
-  assert.equal(resolveModelName({ model: 'gemini-1.5-pro-latest' }), 'gemini-1.5-pro');
-  assert.equal(resolveModelName({ model: 'gemini-2.0-flash-exp' }), 'gemini-2.0-flash');
+test('Extended and legacy model aliases resolve properly to Gemini 3', () => {
+  assert.equal(resolveModelName({ model: 'gemini-pro' }), 'gemini-3.1-pro-preview');
+  assert.equal(resolveModelName({ model: 'gemini-1.0-pro' }), 'gemini-3.1-pro-preview');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-flash-latest' }), 'gemini-3.5-flash-lite-preview');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-pro-latest' }), 'gemini-3.1-pro-preview');
+  assert.equal(resolveModelName({ model: 'gemini-2.0-flash-exp' }), 'gemini-3-flash-preview');
 });
 
-// 11. Fallbacks for 1.5 series models
-test('Fallback candidate lists exist for gemini-1.5-pro and gemini-1.5-flash', () => {
-  const proCandidates = getModelFallbackCandidates('gemini-1.5-pro');
-  assert.ok(proCandidates.length >= 2, 'gemini-1.5-pro has fallback candidates');
-  assert.ok(proCandidates.includes('gemini-2.5-pro'));
-
-  const flashCandidates = getModelFallbackCandidates('gemini-1.5-flash');
-  assert.ok(flashCandidates.length >= 2, 'gemini-1.5-flash has fallback candidates');
-  assert.ok(flashCandidates.includes('gemini-2.5-flash'));
-});
-
-// 12. Model unavailability error detection
+// 11. Model unavailability error detection
 test('isModelUnavailableError detects various Google API error formats', async () => {
   const { isModelUnavailableError } = await import('../src/lib/gemini.js');
   assert.equal(isModelUnavailableError(new Error('404 Not Found')), true);
@@ -174,8 +169,8 @@ test('isModelUnavailableError detects various Google API error formats', async (
   assert.equal(isModelUnavailableError(new Error('Resource exhausted / 429 quota')), false);
 });
 
-// 13. LoadSettings one-time migration and subsequent preservation
-test('loadSettings migrates legacy default once, but preserves subsequent intentional user choice', async () => {
+// 12. LoadSettings legacy migration
+test('loadSettings migrates legacy models to gemini-3.5-flash-lite', async () => {
   const mockStorage = new Map();
   globalThis.localStorage = {
     getItem: (k) => (mockStorage.has(k) ? mockStorage.get(k) : null),
@@ -185,16 +180,15 @@ test('loadSettings migrates legacy default once, but preserves subsequent intent
 
   const { loadSettings: loadFn } = await import('../src/lib/settings.js');
 
-  // Case A: Old unmigrated settings with legacy default
-  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-3-flash' }));
+  // Case A: Old settings with legacy 2.5 flash
+  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-2.5-flash' }));
   const migrated = loadFn();
-  assert.equal(migrated.model, 'gemini-2.5-flash', 'Legacy default gemini-3-flash migrated to 2.5');
-  assert.equal(migrated._modelMigrated, true, 'Migration flag recorded');
+  assert.equal(migrated.model, 'gemini-3.5-flash-lite', 'Legacy 2.5 flash migrated to 3.5 flash lite');
 
-  // Case B: User later explicitly selects gemini-3-flash
-  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-3-flash', _modelMigrated: true }));
-  const reloaded = loadFn();
-  assert.equal(reloaded.model, 'gemini-3-flash', 'Intentional user selection of gemini-3-flash is preserved');
+  // Case B: User has gemini-3-flash
+  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-3-flash' }));
+  const preserved = loadFn();
+  assert.equal(preserved.model, 'gemini-3-flash', 'Gemini 3 family model is preserved');
 });
 
 console.log('================================================================');

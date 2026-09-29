@@ -10,13 +10,11 @@ const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quic
 const TONE_OPTIONS = ['Professional', 'Friendly', 'ELI5'];
 
 const MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Recommended - Fast & Powerful)' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (General Availability - Fast)' },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Stable & Low Latency)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Deep Reasoning & Complex Stacks)' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (High Capability Reasoning)' },
-  { value: 'gemini-3-flash', label: 'Gemini 3 Flash Preview (Next-Gen Fast)' },
-  { value: 'gemini-3-pro', label: 'Gemini 3.1 Pro Preview (Next-Gen Reasoning)' },
+  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Recommended - Ultra-Fast & Lightweight)' },
+  { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Fast & General Diagnostics)' },
+  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Balanced Speed & Reasoning)' },
+  { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Deep Reasoning & Complex Stacks)' },
+  { value: 'gemini-3.5-pro', label: 'Gemini 3.5 Pro (Advanced Architecture & System Analysis)' },
   { value: 'custom', label: 'Custom Model ID...' },
 ];
 
@@ -39,17 +37,22 @@ export default function SettingsPanel({
   };
 
   const PRESET_MAPPINGS = {
+    'gemini-3.5-flash-lite-preview': 'gemini-3.5-flash-lite',
     'gemini-3-flash-preview': 'gemini-3-flash',
-    'gemini-3.1-pro-preview': 'gemini-3-pro',
-    'gemini-3.1-pro': 'gemini-3-pro',
-    'gemini-2.5-flash-lite': 'gemini-2.5-flash',
-    'gemini-2.0-flash-lite': 'gemini-2.0-flash',
+    'gemini-3.5-flash-preview': 'gemini-3.5-flash',
+    'gemini-3.1-pro-preview': 'gemini-3.1-pro',
+    'gemini-3-pro': 'gemini-3.1-pro',
+    'gemini-3.5-pro-preview': 'gemini-3.5-pro',
+    'gemini-2.5-flash': 'gemini-3.5-flash-lite',
+    'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite',
+    'gemini-2.0-flash': 'gemini-3.5-flash-lite',
+    'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
   };
   const normalizedModel = PRESET_MAPPINGS[settings.model] || settings.model;
   const isKnownPreset = MODEL_OPTIONS.some((m) => m.value === normalizedModel && m.value !== 'custom');
   const selectedModelValue = isKnownPreset
     ? normalizedModel
-    : (settings.model ? 'custom' : 'gemini-2.5-flash');
+    : (settings.model ? 'custom' : 'gemini-3.5-flash-lite');
 
   const customModelValue =
     settings.customModel || (!isKnownPreset && settings.model && settings.model !== 'custom' ? settings.model : '');
@@ -177,7 +180,7 @@ export default function SettingsPanel({
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Enter custom model ID (e.g. gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash)..."
+                    placeholder="Enter custom model ID (e.g. gemini-3.5-flash-lite, gemini-3-flash, gemini-3.1-pro)..."
                     value={customModelValue}
                     onChange={(e) => {
                       const nextCustom = e.target.value;
@@ -189,7 +192,7 @@ export default function SettingsPanel({
                     }}
                   />
                   <p className="setting-desc" style={{ marginTop: '4px', fontSize: '11px' }}>
-                    Enter a custom Gemini model identifier. Defaults to gemini-2.5-flash if left blank.
+                    Enter a custom Gemini model identifier. Defaults to gemini-3.5-flash-lite if left blank.
                   </p>
                 </div>
               )}

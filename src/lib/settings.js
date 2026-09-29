@@ -4,7 +4,7 @@ export const DEFAULT_SETTINGS = {
   detail: 'Standard',
   format: 'Diagnosis + Fixes',
   tone: 'Professional',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash-lite',
   customModel: '',
   theme: 'midnight-terminal',
   saveHistory: true,
@@ -18,14 +18,14 @@ export function loadSettings() {
     const saved = localStorage.getItem('CM_SETTINGS');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate legacy non-existent models
-      if (parsed.model === 'gemini-2.0-flash-lite' || parsed.model === 'gemini-2.5-flash-lite') {
-        parsed.model = 'gemini-2.5-flash';
-      }
-      // Migrate legacy default gemini-3-flash once to stable gemini-2.5-flash
-      if (!parsed._modelMigrated && parsed.model === 'gemini-3-flash') {
-        parsed.model = 'gemini-2.5-flash';
-        parsed._modelMigrated = true;
+      // Migrate legacy deprecated models (2.x, 1.x, or old presets) to modern Gemini 3.5 Flash Lite default
+      if (
+        !parsed.model ||
+        parsed.model.startsWith('gemini-2') ||
+        parsed.model.startsWith('gemini-1') ||
+        parsed.model === 'gemini-pro'
+      ) {
+        parsed.model = 'gemini-3.5-flash-lite';
         try {
           localStorage.setItem('CM_SETTINGS', JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
         } catch { /* ignore */ }
@@ -106,25 +106,19 @@ export function filterHistory(history, query = '', modelFilter = 'All') {
     if (m && m !== 'all') {
       const itemModel = (item.model || '').toLowerCase();
       const normalizedBadge = (
-        itemModel === 'gemini-2.5-flash' ? '2.5 flash' :
-        itemModel === 'gemini-2.0-flash' ? '2.0 flash' :
-        itemModel === 'gemini-1.5-flash' ? '1.5 flash' :
-        itemModel === 'gemini-2.5-pro' ? '2.5 pro' :
-        itemModel === 'gemini-1.5-pro' ? '1.5 pro' :
+        itemModel === 'gemini-3.5-flash-lite' || itemModel === 'gemini-3.5-flash-lite-preview' ? '3.5 flash lite' :
         itemModel === 'gemini-3-flash' || itemModel === 'gemini-3-flash-preview' ? '3 flash' :
-        itemModel === 'gemini-3-pro' || itemModel === 'gemini-3.1-pro-preview' || itemModel === 'gemini-3.1-pro' ? '3 pro' :
-        itemModel === 'gemini-2.5-flash-lite' ? '2.5 flash lite' :
-        itemModel === 'gemini-2.0-flash-lite' ? '2.0 flash lite' :
+        itemModel === 'gemini-3.5-flash' || itemModel === 'gemini-3.5-flash-preview' ? '3.5 flash' :
+        itemModel === 'gemini-3.1-pro' || itemModel === 'gemini-3.1-pro-preview' || itemModel === 'gemini-3-pro' ? '3.1 pro' :
+        itemModel === 'gemini-3.5-pro' || itemModel === 'gemini-3.5-pro-preview' ? '3.5 pro' :
         itemModel.replace(/^gemini-/, '')
       ).toLowerCase();
 
       const matchesModel =
         itemModel === m ||
         normalizedBadge === m ||
-        itemModel.includes(m) ||
-        normalizedBadge.includes(m) ||
-        m.includes(normalizedBadge) ||
-        m.includes(itemModel);
+        itemModel === `gemini-${m.replace(/\s+/g, '-')}` ||
+        normalizedBadge === m.replace(/^gemini-/, '').replace(/-/g, ' ');
 
       if (!matchesModel) return false;
     }
@@ -185,7 +179,7 @@ export function importHistoryFromJSON(jsonString) {
         timestamp: item.timestamp || new Date().toISOString(),
         logs: item.logs,
         result: item.result || item.diagnosis || '',
-        model: item.model || 'gemini-2.5-flash',
+        model: item.model || 'gemini-3.5-flash-lite',
         provider: item.provider || 'gemini',
       });
     }

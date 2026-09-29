@@ -6,11 +6,13 @@ import {
 } from '../gemini.js';
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-3-flash', name: 'Gemini 3 Flash (Recommended - Fastest & Next-Gen)', isDefault: true },
-  { id: 'gemini-3-pro', name: 'Gemini 3 Pro (Deepest Reasoning & Complex Stacks)' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Balanced & Fast)' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Cheapest)' },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (High Capability)' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Recommended - Fast & Powerful)', isDefault: true },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (General Availability - Fast)' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Stable & Low Latency)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Deep Reasoning & Complex Stacks)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (High Capability Reasoning)' },
+  { id: 'gemini-3-flash', name: 'Gemini 3 Flash Preview (Next-Gen Fast)' },
+  { id: 'gemini-3-pro', name: 'Gemini 3.1 Pro Preview (Next-Gen Reasoning)' },
   { id: 'custom', name: 'Custom Model ID...' },
 ];
 
@@ -23,10 +25,10 @@ export class GeminiProvider extends AIProvider {
     super({
       id: 'gemini',
       name: 'Google Gemini',
-      description: 'Cloud-based Google Gemini 3 and 2.5 generative models (BYOK).',
+      description: 'Cloud-based Google Gemini 2.5 and 2.0 generative models (BYOK).',
       isLocal: false,
       requiresApiKey: true,
-      defaultModel: 'gemini-3-flash',
+      defaultModel: 'gemini-2.5-flash',
       capabilities: {
         streaming: true,
         modelListing: true,

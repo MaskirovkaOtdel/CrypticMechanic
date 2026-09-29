@@ -28,13 +28,15 @@ import './App.css';
 initExtensions();
 
 function formatModelBadge(modelName) {
-  if (!modelName) return '3 Flash';
-  if (modelName === 'gemini-3-flash') return '3 Flash';
-  if (modelName === 'gemini-3-pro') return '3 Pro';
+  if (!modelName) return '2.5 Flash';
   if (modelName === 'gemini-2.5-flash') return '2.5 Flash';
-  if (modelName === 'gemini-2.5-flash-lite') return '2.5 Flash Lite';
-  if (modelName === 'gemini-2.5-pro') return '2.5 Pro';
   if (modelName === 'gemini-2.0-flash') return '2.0 Flash';
+  if (modelName === 'gemini-1.5-flash') return '1.5 Flash';
+  if (modelName === 'gemini-2.5-pro') return '2.5 Pro';
+  if (modelName === 'gemini-1.5-pro') return '1.5 Pro';
+  if (modelName === 'gemini-3-flash' || modelName === 'gemini-3-flash-preview') return '3 Flash';
+  if (modelName === 'gemini-3-pro' || modelName === 'gemini-3.1-pro-preview') return '3 Pro';
+  if (modelName === 'gemini-2.5-flash-lite') return '2.5 Flash Lite';
   if (modelName === 'gemini-2.0-flash-lite') return '2.0 Flash Lite';
   return modelName.replace(/^gemini-/, '');
 }
@@ -183,7 +185,7 @@ function App() {
     reader.readAsText(file);
   };
 
-  const standardChips = ['All', '3 Flash', '3 Pro', '2.5 Flash'];
+  const standardChips = ['All', '2.5 Flash', '2.0 Flash', '1.5 Flash', '3 Flash'];
   const dynamicModelChips = Array.from(new Set(
     history.map((item) => formatModelBadge(item.model)).filter(Boolean)
   )).filter((badge) => !standardChips.includes(badge));

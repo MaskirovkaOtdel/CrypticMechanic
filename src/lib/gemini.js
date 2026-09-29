@@ -1,13 +1,62 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
+ * Canonical model aliases mapping friendly or legacy IDs to valid Google Generative AI endpoints.
+ */
+export const MODEL_ALIASES = {
+  // Gemini 3 series aliases (map shorthand to actual preview endpoint)
+  'gemini-3-flash': 'gemini-3-flash-preview',
+  'gemini-3-pro': 'gemini-3.1-pro-preview',
+  'gemini-3.1-pro': 'gemini-3.1-pro-preview',
+  // Deprecated/legacy alias mapping to active equivalents
+  'gemini-2.5-flash-lite': 'gemini-2.5-flash',
+  'gemini-2.0-flash-lite': 'gemini-2.0-flash',
+};
+
+/**
+ * Fallback chains when a selected model returns 404 (e.g. preview access not allowlisted).
+ */
+export const MODEL_FALLBACKS = {
+  'gemini-3-flash-preview': ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
+  'gemini-3-flash': ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
+  'gemini-3.1-pro-preview': ['gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash'],
+  'gemini-3-pro': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-1.5-pro'],
+  'gemini-2.5-pro': ['gemini-1.5-pro', 'gemini-2.5-flash'],
+  'gemini-2.5-flash': ['gemini-2.0-flash', 'gemini-1.5-flash'],
+  'gemini-2.0-flash': ['gemini-1.5-flash'],
+};
+
+/**
  * Resolve the effective model identifier based on settings.
  */
 export function resolveModelName(settings = {}) {
-  if (settings.model === 'custom') {
-    return (settings.customModel || '').trim() || 'gemini-3-flash';
+  let raw = settings.model === 'custom'
+    ? (settings.customModel || '').trim() || 'gemini-2.5-flash'
+    : (settings.model || '').trim() || 'gemini-2.5-flash';
+
+  // Cross-provider hygiene: If an Ollama or non-Gemini model is set, default to gemini-2.5-flash
+  if (
+    raw.includes(':') ||
+    raw.startsWith('llama') ||
+    raw.startsWith('qwen') ||
+    raw.startsWith('mistral') ||
+    raw.startsWith('deepseek')
+  ) {
+    raw = 'gemini-2.5-flash';
   }
-  return settings.model || 'gemini-3-flash';
+
+  return MODEL_ALIASES[raw] || raw;
+}
+
+/**
+ * Return list of candidate models to try in order (primary + fallbacks).
+ */
+export function getModelFallbackCandidates(modelName) {
+  const resolved = MODEL_ALIASES[modelName] || modelName;
+  const fallbacks = MODEL_FALLBACKS[resolved] || MODEL_FALLBACKS[modelName] || [];
+  return [resolved, ...fallbacks.map((f) => MODEL_ALIASES[f] || f)].filter(
+    (m, idx, arr) => arr.indexOf(m) === idx
+  );
 }
 
 /**
@@ -93,17 +142,17 @@ ${fence}`;
 }
 
 /**
- * Instantiate the GoogleGenerativeAI model with system instructions and temperature 0.2.
+ * Instantiate the GoogleGenerativeAI model with system instructions and temperature 0.2
+ * using a specific resolved model identifier.
  */
-function getGenerativeModel(apiKey, settings) {
+export function getGenerativeModelWithSpecificModel(apiKey, settings, specificModel) {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = resolveModelName(settings);
   const systemInstruction = buildSystemInstruction(settings);
 
   return {
-    modelName,
+    modelName: specificModel,
     model: genAI.getGenerativeModel({
-      model: modelName,
+      model: specificModel,
       systemInstruction,
       generationConfig: {
         temperature: 0.2,
@@ -113,9 +162,17 @@ function getGenerativeModel(apiKey, settings) {
 }
 
 /**
+ * Instantiate the GoogleGenerativeAI model with system instructions and temperature 0.2.
+ */
+export function getGenerativeModel(apiKey, settings) {
+  const modelName = resolveModelName(settings);
+  return getGenerativeModelWithSpecificModel(apiKey, settings, modelName);
+}
+
+/**
  * Format raw Gemini errors into actionable, developer-friendly messages.
  */
-function handleGeminiError(err, modelName = '') {
+export function handleGeminiError(err, modelName = '') {
   const rawMsg = err?.message || String(err);
   const lowerMsg = rawMsg.toLowerCase();
 
@@ -138,7 +195,7 @@ function handleGeminiError(err, modelName = '') {
   }
   if (lowerMsg.includes('resource_exhausted') || lowerMsg.includes('429')) {
     throw new Error(
-      'Gemini API quota exceeded (Rate Limit / 429). Please wait a few moments or switch to a lighter model (e.g. Gemini 3 Flash or Gemini 2.5 Flash Lite) in Settings.',
+      'Gemini API quota exceeded (Rate Limit / 429). Please wait a few moments or switch to a lighter model (e.g. Gemini 2.5 Flash or Gemini 2.0 Flash) in Settings.',
       { cause: err }
     );
   }
@@ -147,7 +204,7 @@ function handleGeminiError(err, modelName = '') {
   }
   if (lowerMsg.includes('404') || lowerMsg.includes('not found') || lowerMsg.includes('is not supported')) {
     throw new Error(
-      `Model "${modelName || 'selected'}" not found or unsupported. Please check the model ID in Settings.`,
+      `Model "${modelName || 'selected'}" not found or unsupported by Google Generative AI. Please select a supported model (e.g. Gemini 2.5 Flash, 2.0 Flash) in Settings.`,
       { cause: err }
     );
   }
@@ -156,7 +213,8 @@ function handleGeminiError(err, modelName = '') {
 }
 
 /**
- * Translate error logs using the Gemini API (standard non-streaming).
+ * Translate error logs using the Gemini API (standard non-streaming),
+ * with automatic fallback to stable models if a preview model is 404.
  */
 export async function translateError(logs, settings) {
   const apiKey = (settings.apiKey || '').trim();
@@ -165,22 +223,36 @@ export async function translateError(logs, settings) {
     throw new Error('No API key configured. Open Settings (⚙) to add your Gemini API key.');
   }
 
-  let modelName = '';
-  try {
-    const instance = getGenerativeModel(apiKey, settings);
-    modelName = instance.modelName;
-    const prompt = buildUserPrompt(logs);
-    const result = await instance.model.generateContent(prompt);
-    return result.response.text();
-  } catch (err) {
-    handleGeminiError(err, modelName);
+  const initialModel = resolveModelName(settings);
+  const candidates = getModelFallbackCandidates(initialModel);
+  let lastErr = null;
+
+  for (let i = 0; i < candidates.length; i++) {
+    const modelToTry = candidates[i];
+    try {
+      const instance = getGenerativeModelWithSpecificModel(apiKey, settings, modelToTry);
+      const prompt = buildUserPrompt(logs);
+      const result = await instance.model.generateContent(prompt);
+      return result.response.text();
+    } catch (err) {
+      lastErr = err;
+      const lower = (err?.message || '').toLowerCase();
+      const is404 = lower.includes('404') || lower.includes('not found') || lower.includes('is not supported');
+      if (is404 && i < candidates.length - 1) {
+        console.warn(`[CrypticMechanic] Model "${modelToTry}" not available, falling back to "${candidates[i + 1]}"...`);
+        continue;
+      }
+      break;
+    }
   }
+
+  handleGeminiError(lastErr, initialModel);
 }
 
 /**
- * Translate error logs using the Gemini API with streaming generation.
+ * Translate error logs using the Gemini API with streaming generation,
+ * with automatic fallback to stable models if a preview model is 404.
  * Calls onChunk(accumulatedText, chunkText) as chunks arrive.
- * Falls back to standard translateError if streaming is unsupported.
  */
 export async function translateErrorStream(logs, settings, onChunk) {
   const apiKey = (settings.apiKey || '').trim();
@@ -189,61 +261,81 @@ export async function translateErrorStream(logs, settings, onChunk) {
     throw new Error('No API key configured. Open Settings (⚙) to add your Gemini API key.');
   }
 
-  let modelName = '';
-  try {
-    const instance = getGenerativeModel(apiKey, settings);
-    modelName = instance.modelName;
-    const prompt = buildUserPrompt(logs);
+  const initialModel = resolveModelName(settings);
+  const candidates = getModelFallbackCandidates(initialModel);
+  let lastErr = null;
 
-    if (typeof instance.model?.generateContentStream === 'function') {
-      try {
-        const streamResult = await instance.model.generateContentStream(prompt);
-        let accumulatedText = '';
+  for (let i = 0; i < candidates.length; i++) {
+    const modelToTry = candidates[i];
+    try {
+      const instance = getGenerativeModelWithSpecificModel(apiKey, settings, modelToTry);
+      const prompt = buildUserPrompt(logs);
 
-        for await (const chunk of streamResult.stream) {
-          const chunkText = chunk.text();
-          accumulatedText += chunkText;
-          if (typeof onChunk === 'function') {
-            onChunk(accumulatedText, chunkText);
+      if (typeof instance.model?.generateContentStream === 'function') {
+        try {
+          const streamResult = await instance.model.generateContentStream(prompt);
+          let accumulatedText = '';
+
+          for await (const chunk of streamResult.stream) {
+            const chunkText = chunk.text();
+            accumulatedText += chunkText;
+            if (typeof onChunk === 'function') {
+              onChunk(accumulatedText, chunkText);
+            }
           }
-        }
 
-        if (accumulatedText) {
-          return accumulatedText;
-        }
-
-        // If stream loop produced no chunks, await full response
-        const finalResp = await streamResult.response;
-        const finalText = finalResp.text();
-        if (typeof onChunk === 'function' && finalText) {
-          onChunk(finalText, finalText);
-        }
-        return finalText;
-      } catch (streamErr) {
-        // Fallback to standard generateContent if streaming specifically fails or is unsupported
-        const streamErrMsg = (streamErr?.message || '').toLowerCase();
-        if (
-          streamErrMsg.includes('stream not supported') ||
-          streamErrMsg.includes('streaming is not supported') ||
-          streamErrMsg.includes('unsupported method')
-        ) {
-          const fallbackText = await translateError(logs, settings);
-          if (typeof onChunk === 'function') {
-            onChunk(fallbackText, fallbackText);
+          if (accumulatedText) {
+            return accumulatedText;
           }
-          return fallbackText;
+
+          // If stream loop produced no chunks, await full response
+          const finalResp = await streamResult.response;
+          const finalText = finalResp.text();
+          if (typeof onChunk === 'function' && finalText) {
+            onChunk(finalText, finalText);
+          }
+          return finalText;
+        } catch (streamErr) {
+          const streamErrMsg = (streamErr?.message || '').toLowerCase();
+          const is404 = streamErrMsg.includes('404') || streamErrMsg.includes('not found') || streamErrMsg.includes('is not supported');
+          if (is404 && i < candidates.length - 1) {
+            console.warn(`[CrypticMechanic] Streaming model "${modelToTry}" returned 404, falling back to "${candidates[i + 1]}"...`);
+            lastErr = streamErr;
+            continue;
+          }
+          // Fallback to standard generateContent if streaming specifically fails or is unsupported
+          if (
+            streamErrMsg.includes('stream not supported') ||
+            streamErrMsg.includes('streaming is not supported') ||
+            streamErrMsg.includes('unsupported method')
+          ) {
+            const fallbackText = await translateError(logs, { ...settings, model: modelToTry });
+            if (typeof onChunk === 'function') {
+              onChunk(fallbackText, fallbackText);
+            }
+            return fallbackText;
+          }
+          throw streamErr;
         }
-        throw streamErr;
+      } else {
+        // Fallback if generateContentStream is missing
+        const text = await translateError(logs, { ...settings, model: modelToTry });
+        if (typeof onChunk === 'function') {
+          onChunk(text, text);
+        }
+        return text;
       }
-    } else {
-      // Fallback if generateContentStream is missing
-      const text = await translateError(logs, settings);
-      if (typeof onChunk === 'function') {
-        onChunk(text, text);
+    } catch (err) {
+      lastErr = err;
+      const lower = (err?.message || '').toLowerCase();
+      const is404 = lower.includes('404') || lower.includes('not found') || lower.includes('is not supported');
+      if (is404 && i < candidates.length - 1) {
+        console.warn(`[CrypticMechanic] Model "${modelToTry}" not available, falling back to "${candidates[i + 1]}"...`);
+        continue;
       }
-      return text;
+      break;
     }
-  } catch (err) {
-    handleGeminiError(err, modelName);
   }
+
+  handleGeminiError(lastErr, initialModel);
 }

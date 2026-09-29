@@ -4,7 +4,7 @@ export const DEFAULT_SETTINGS = {
   detail: 'Standard',
   format: 'Diagnosis + Fixes',
   tone: 'Professional',
-  model: 'gemini-3-flash',
+  model: 'gemini-2.5-flash',
   customModel: '',
   theme: 'midnight-terminal',
   saveHistory: true,
@@ -18,9 +18,13 @@ export function loadSettings() {
     const saved = localStorage.getItem('CM_SETTINGS');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate legacy default models to current standard default
-      if (parsed.model === 'gemini-2.0-flash-lite' || parsed.model === 'gemini-2.5-flash') {
-        parsed.model = 'gemini-3-flash';
+      // Migrate legacy or non-working default models to current standard default
+      if (
+        parsed.model === 'gemini-3-flash' ||
+        parsed.model === 'gemini-2.0-flash-lite' ||
+        parsed.model === 'gemini-2.5-flash-lite'
+      ) {
+        parsed.model = 'gemini-2.5-flash';
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
@@ -98,12 +102,14 @@ export function filterHistory(history, query = '', modelFilter = 'All') {
     if (m && m !== 'all') {
       const itemModel = (item.model || '').toLowerCase();
       const normalizedBadge = (
-        itemModel === 'gemini-3-flash' ? '3 flash' :
-        itemModel === 'gemini-3-pro' ? '3 pro' :
         itemModel === 'gemini-2.5-flash' ? '2.5 flash' :
-        itemModel === 'gemini-2.5-flash-lite' ? '2.5 flash lite' :
-        itemModel === 'gemini-2.5-pro' ? '2.5 pro' :
         itemModel === 'gemini-2.0-flash' ? '2.0 flash' :
+        itemModel === 'gemini-1.5-flash' ? '1.5 flash' :
+        itemModel === 'gemini-2.5-pro' ? '2.5 pro' :
+        itemModel === 'gemini-1.5-pro' ? '1.5 pro' :
+        itemModel === 'gemini-3-flash' || itemModel === 'gemini-3-flash-preview' ? '3 flash' :
+        itemModel === 'gemini-3-pro' || itemModel === 'gemini-3.1-pro-preview' ? '3 pro' :
+        itemModel === 'gemini-2.5-flash-lite' ? '2.5 flash lite' :
         itemModel === 'gemini-2.0-flash-lite' ? '2.0 flash lite' :
         itemModel.replace(/^gemini-/, '')
       ).toLowerCase();
@@ -175,7 +181,7 @@ export function importHistoryFromJSON(jsonString) {
         timestamp: item.timestamp || new Date().toISOString(),
         logs: item.logs,
         result: item.result || item.diagnosis || '',
-        model: item.model || 'gemini-3-flash',
+        model: item.model || 'gemini-2.5-flash',
         provider: item.provider || 'gemini',
       });
     }

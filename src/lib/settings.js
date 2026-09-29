@@ -18,13 +18,17 @@ export function loadSettings() {
     const saved = localStorage.getItem('CM_SETTINGS');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate legacy or non-working default models to current standard default
-      if (
-        parsed.model === 'gemini-3-flash' ||
-        parsed.model === 'gemini-2.0-flash-lite' ||
-        parsed.model === 'gemini-2.5-flash-lite'
-      ) {
+      // Migrate legacy non-existent models
+      if (parsed.model === 'gemini-2.0-flash-lite' || parsed.model === 'gemini-2.5-flash-lite') {
         parsed.model = 'gemini-2.5-flash';
+      }
+      // Migrate legacy default gemini-3-flash once to stable gemini-2.5-flash
+      if (!parsed._modelMigrated && parsed.model === 'gemini-3-flash') {
+        parsed.model = 'gemini-2.5-flash';
+        parsed._modelMigrated = true;
+        try {
+          localStorage.setItem('CM_SETTINGS', JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
+        } catch { /* ignore */ }
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
@@ -108,7 +112,7 @@ export function filterHistory(history, query = '', modelFilter = 'All') {
         itemModel === 'gemini-2.5-pro' ? '2.5 pro' :
         itemModel === 'gemini-1.5-pro' ? '1.5 pro' :
         itemModel === 'gemini-3-flash' || itemModel === 'gemini-3-flash-preview' ? '3 flash' :
-        itemModel === 'gemini-3-pro' || itemModel === 'gemini-3.1-pro-preview' ? '3 pro' :
+        itemModel === 'gemini-3-pro' || itemModel === 'gemini-3.1-pro-preview' || itemModel === 'gemini-3.1-pro' ? '3 pro' :
         itemModel === 'gemini-2.5-flash-lite' ? '2.5 flash lite' :
         itemModel === 'gemini-2.0-flash-lite' ? '2.0 flash lite' :
         itemModel.replace(/^gemini-/, '')

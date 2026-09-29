@@ -35,7 +35,7 @@ function formatModelBadge(modelName) {
   if (modelName === 'gemini-2.5-pro') return '2.5 Pro';
   if (modelName === 'gemini-1.5-pro') return '1.5 Pro';
   if (modelName === 'gemini-3-flash' || modelName === 'gemini-3-flash-preview') return '3 Flash';
-  if (modelName === 'gemini-3-pro' || modelName === 'gemini-3.1-pro-preview') return '3 Pro';
+  if (modelName === 'gemini-3-pro' || modelName === 'gemini-3.1-pro-preview' || modelName === 'gemini-3.1-pro') return '3 Pro';
   if (modelName === 'gemini-2.5-flash-lite') return '2.5 Flash Lite';
   if (modelName === 'gemini-2.0-flash-lite') return '2.0 Flash Lite';
   return modelName.replace(/^gemini-/, '');
@@ -317,11 +317,15 @@ function App() {
         setResult(outcome);
       }
 
+      const recordedModel = typeof activeProvider.getLastUsedModel === 'function'
+        ? activeProvider.getLastUsedModel()
+        : activeModel;
+
       if (settings.saveHistory !== false && outcome) {
         const updated = saveHistoryItem({
           logs,
           result: outcome,
-          model: activeModel,
+          model: recordedModel,
           provider: activeProvider.id,
         });
         setHistory(updated);

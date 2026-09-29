@@ -3,6 +3,7 @@ import {
   translateErrorStream,
   translateError,
   resolveModelName,
+  getLastSuccessfulModel,
 } from '../gemini.js';
 
 export const GEMINI_MODELS = [
@@ -88,5 +89,9 @@ export class GeminiProvider extends AIProvider {
 
   resolveModel(settings = {}) {
     return resolveModelName(settings);
+  }
+
+  getLastUsedModel() {
+    return getLastSuccessfulModel();
   }
 }

@@ -126,20 +126,75 @@ test('GEMINI_MODELS contains all core models', () => {
   assert.ok(ids.includes('gemini-3-pro'));
 });
 
-// 9. History filtering
-test('filterHistory correctly filters by model and badges', () => {
+test('filterHistory correctly filters by model and badges including 3.1 pro', () => {
   const sampleHistory = [
     { id: '1', logs: 'err 1', model: 'gemini-2.5-flash', result: 'fix 1' },
     { id: '2', logs: 'err 2', model: 'gemini-2.0-flash', result: 'fix 2' },
     { id: '3', logs: 'err 3', model: 'gemini-1.5-flash', result: 'fix 3' },
     { id: '4', logs: 'err 4', model: 'gemini-3-flash', result: 'fix 4' },
+    { id: '5', logs: 'err 5', model: 'gemini-3.1-pro', result: 'fix 5' },
   ];
 
-  assert.equal(filterHistory(sampleHistory, '', 'All').length, 4);
+  assert.equal(filterHistory(sampleHistory, '', 'All').length, 5);
   assert.equal(filterHistory(sampleHistory, '', '2.5 Flash').length, 1);
   assert.equal(filterHistory(sampleHistory, '', '2.0 Flash').length, 1);
   assert.equal(filterHistory(sampleHistory, '', '1.5 Flash').length, 1);
   assert.equal(filterHistory(sampleHistory, '', '3 Flash').length, 1);
+  assert.equal(filterHistory(sampleHistory, '', '3 Pro').length, 1);
+});
+
+// 10. Extended aliases resolution
+test('Extended and legacy model aliases resolve properly', () => {
+  assert.equal(resolveModelName({ model: 'gemini-pro' }), 'gemini-1.5-pro');
+  assert.equal(resolveModelName({ model: 'gemini-1.0-pro' }), 'gemini-1.5-pro');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-flash-latest' }), 'gemini-1.5-flash');
+  assert.equal(resolveModelName({ model: 'gemini-1.5-pro-latest' }), 'gemini-1.5-pro');
+  assert.equal(resolveModelName({ model: 'gemini-2.0-flash-exp' }), 'gemini-2.0-flash');
+});
+
+// 11. Fallbacks for 1.5 series models
+test('Fallback candidate lists exist for gemini-1.5-pro and gemini-1.5-flash', () => {
+  const proCandidates = getModelFallbackCandidates('gemini-1.5-pro');
+  assert.ok(proCandidates.length >= 2, 'gemini-1.5-pro has fallback candidates');
+  assert.ok(proCandidates.includes('gemini-2.5-pro'));
+
+  const flashCandidates = getModelFallbackCandidates('gemini-1.5-flash');
+  assert.ok(flashCandidates.length >= 2, 'gemini-1.5-flash has fallback candidates');
+  assert.ok(flashCandidates.includes('gemini-2.5-flash'));
+});
+
+// 12. Model unavailability error detection
+test('isModelUnavailableError detects various Google API error formats', async () => {
+  const { isModelUnavailableError } = await import('../src/lib/gemini.js');
+  assert.equal(isModelUnavailableError(new Error('404 Not Found')), true);
+  assert.equal(isModelUnavailableError(new Error('models/gemini-3-flash is not found for API version v1beta')), true);
+  assert.equal(isModelUnavailableError(new Error('models/gemini-3-flash is not supported for generateContent')), true);
+  assert.equal(isModelUnavailableError(new Error('[GoogleGenerativeAI Error]: Error 400 Bad Request models/foo does not exist')), true);
+  assert.equal(isModelUnavailableError(new Error('Invalid API key')), false);
+  assert.equal(isModelUnavailableError(new Error('Resource exhausted / 429 quota')), false);
+});
+
+// 13. LoadSettings one-time migration and subsequent preservation
+test('loadSettings migrates legacy default once, but preserves subsequent intentional user choice', async () => {
+  const mockStorage = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (mockStorage.has(k) ? mockStorage.get(k) : null),
+    setItem: (k, v) => mockStorage.set(k, String(v)),
+    removeItem: (k) => mockStorage.delete(k),
+  };
+
+  const { loadSettings: loadFn } = await import('../src/lib/settings.js');
+
+  // Case A: Old unmigrated settings with legacy default
+  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-3-flash' }));
+  const migrated = loadFn();
+  assert.equal(migrated.model, 'gemini-2.5-flash', 'Legacy default gemini-3-flash migrated to 2.5');
+  assert.equal(migrated._modelMigrated, true, 'Migration flag recorded');
+
+  // Case B: User later explicitly selects gemini-3-flash
+  mockStorage.set('CM_SETTINGS', JSON.stringify({ model: 'gemini-3-flash', _modelMigrated: true }));
+  const reloaded = loadFn();
+  assert.equal(reloaded.model, 'gemini-3-flash', 'Intentional user selection of gemini-3-flash is preserved');
 });
 
 console.log('================================================================');

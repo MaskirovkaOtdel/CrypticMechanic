@@ -38,13 +38,17 @@ export default function SettingsPanel({
     onSettingsChange({ ...settings, [key]: value });
   };
 
-  const isKnownPreset = MODEL_OPTIONS.some((m) => m.value === settings.model && m.value !== 'custom') ||
-    settings.model === 'gemini-3-flash-preview' ||
-    settings.model === 'gemini-3.1-pro-preview' ||
-    settings.model === 'gemini-2.5-flash-lite' ||
-    settings.model === 'gemini-2.0-flash-lite';
+  const PRESET_MAPPINGS = {
+    'gemini-3-flash-preview': 'gemini-3-flash',
+    'gemini-3.1-pro-preview': 'gemini-3-pro',
+    'gemini-3.1-pro': 'gemini-3-pro',
+    'gemini-2.5-flash-lite': 'gemini-2.5-flash',
+    'gemini-2.0-flash-lite': 'gemini-2.0-flash',
+  };
+  const normalizedModel = PRESET_MAPPINGS[settings.model] || settings.model;
+  const isKnownPreset = MODEL_OPTIONS.some((m) => m.value === normalizedModel && m.value !== 'custom');
   const selectedModelValue = isKnownPreset
-    ? (settings.model === 'gemini-3-flash-preview' ? 'gemini-3-flash' : settings.model === 'gemini-3.1-pro-preview' ? 'gemini-3-pro' : settings.model)
+    ? normalizedModel
     : (settings.model ? 'custom' : 'gemini-2.5-flash');
 
   const customModelValue =

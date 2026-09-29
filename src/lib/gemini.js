@@ -11,6 +11,12 @@ export const MODEL_ALIASES = {
   // Deprecated/legacy alias mapping to active equivalents
   'gemini-2.5-flash-lite': 'gemini-2.5-flash',
   'gemini-2.0-flash-lite': 'gemini-2.0-flash',
+  'gemini-pro': 'gemini-1.5-pro',
+  'gemini-1.0-pro': 'gemini-1.5-pro',
+  'gemini-1.5-flash-latest': 'gemini-1.5-flash',
+  'gemini-1.5-pro-latest': 'gemini-1.5-pro',
+  'gemini-2.0-flash-exp': 'gemini-2.0-flash',
+  'gemini-exp-1206': 'gemini-2.0-flash',
 };
 
 /**
@@ -20,11 +26,44 @@ export const MODEL_FALLBACKS = {
   'gemini-3-flash-preview': ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
   'gemini-3-flash': ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
   'gemini-3.1-pro-preview': ['gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash'],
-  'gemini-3-pro': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-1.5-pro'],
-  'gemini-2.5-pro': ['gemini-1.5-pro', 'gemini-2.5-flash'],
+  'gemini-3-pro': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash'],
+  'gemini-2.5-pro': ['gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-1.5-flash'],
+  'gemini-1.5-pro': ['gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-2.5-flash'],
   'gemini-2.5-flash': ['gemini-2.0-flash', 'gemini-1.5-flash'],
-  'gemini-2.0-flash': ['gemini-1.5-flash'],
+  'gemini-2.0-flash': ['gemini-2.5-flash', 'gemini-1.5-flash'],
+  'gemini-1.5-flash': ['gemini-2.5-flash', 'gemini-2.0-flash'],
 };
+
+let lastSuccessfulModel = 'gemini-2.5-flash';
+
+export function getLastSuccessfulModel() {
+  return lastSuccessfulModel;
+}
+
+export function setLastSuccessfulModel(model) {
+  if (model && typeof model === 'string') {
+    lastSuccessfulModel = model;
+  }
+}
+
+/**
+ * Helper to identify model unavailability, missing preview access, or 404 from Google API.
+ */
+export function isModelUnavailableError(err) {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  return (
+    msg.includes('404') ||
+    msg.includes('not found') ||
+    msg.includes('not_found') ||
+    msg.includes('is not supported') ||
+    msg.includes('unsupported model') ||
+    msg.includes('does not exist') ||
+    msg.includes('model not found') ||
+    (msg.includes('model') && msg.includes('invalid')) ||
+    (msg.includes('models/') && msg.includes('400'))
+  );
+}
 
 /**
  * Resolve the effective model identifier based on settings.
@@ -214,7 +253,7 @@ export function handleGeminiError(err, modelName = '') {
 
 /**
  * Translate error logs using the Gemini API (standard non-streaming),
- * with automatic fallback to stable models if a preview model is 404.
+ * with automatic fallback to stable models if a preview model is 404 or unsupported.
  */
 export async function translateError(logs, settings) {
   const apiKey = (settings.apiKey || '').trim();
@@ -233,12 +272,13 @@ export async function translateError(logs, settings) {
       const instance = getGenerativeModelWithSpecificModel(apiKey, settings, modelToTry);
       const prompt = buildUserPrompt(logs);
       const result = await instance.model.generateContent(prompt);
-      return result.response.text();
+      const outputText = result.response.text();
+      setLastSuccessfulModel(modelToTry);
+      return outputText;
     } catch (err) {
       lastErr = err;
-      const lower = (err?.message || '').toLowerCase();
-      const is404 = lower.includes('404') || lower.includes('not found') || lower.includes('is not supported');
-      if (is404 && i < candidates.length - 1) {
+      const isUnavailable = isModelUnavailableError(err);
+      if (isUnavailable && i < candidates.length - 1) {
         console.warn(`[CrypticMechanic] Model "${modelToTry}" not available, falling back to "${candidates[i + 1]}"...`);
         continue;
       }
@@ -251,7 +291,7 @@ export async function translateError(logs, settings) {
 
 /**
  * Translate error logs using the Gemini API with streaming generation,
- * with automatic fallback to stable models if a preview model is 404.
+ * with automatic fallback to stable models if a preview model is 404 or unsupported.
  * Calls onChunk(accumulatedText, chunkText) as chunks arrive.
  */
 export async function translateErrorStream(logs, settings, onChunk) {
@@ -285,6 +325,7 @@ export async function translateErrorStream(logs, settings, onChunk) {
           }
 
           if (accumulatedText) {
+            setLastSuccessfulModel(modelToTry);
             return accumulatedText;
           }
 
@@ -294,12 +335,13 @@ export async function translateErrorStream(logs, settings, onChunk) {
           if (typeof onChunk === 'function' && finalText) {
             onChunk(finalText, finalText);
           }
+          setLastSuccessfulModel(modelToTry);
           return finalText;
         } catch (streamErr) {
           const streamErrMsg = (streamErr?.message || '').toLowerCase();
-          const is404 = streamErrMsg.includes('404') || streamErrMsg.includes('not found') || streamErrMsg.includes('is not supported');
-          if (is404 && i < candidates.length - 1) {
-            console.warn(`[CrypticMechanic] Streaming model "${modelToTry}" returned 404, falling back to "${candidates[i + 1]}"...`);
+          const isUnavailable = isModelUnavailableError(streamErr);
+          if (isUnavailable && i < candidates.length - 1) {
+            console.warn(`[CrypticMechanic] Streaming model "${modelToTry}" returned 404/unsupported, falling back to "${candidates[i + 1]}"...`);
             lastErr = streamErr;
             continue;
           }
@@ -313,6 +355,7 @@ export async function translateErrorStream(logs, settings, onChunk) {
             if (typeof onChunk === 'function') {
               onChunk(fallbackText, fallbackText);
             }
+            setLastSuccessfulModel(modelToTry);
             return fallbackText;
           }
           throw streamErr;
@@ -323,13 +366,13 @@ export async function translateErrorStream(logs, settings, onChunk) {
         if (typeof onChunk === 'function') {
           onChunk(text, text);
         }
+        setLastSuccessfulModel(modelToTry);
         return text;
       }
     } catch (err) {
       lastErr = err;
-      const lower = (err?.message || '').toLowerCase();
-      const is404 = lower.includes('404') || lower.includes('not found') || lower.includes('is not supported');
-      if (is404 && i < candidates.length - 1) {
+      const isUnavailable = isModelUnavailableError(err);
+      if (isUnavailable && i < candidates.length - 1) {
         console.warn(`[CrypticMechanic] Model "${modelToTry}" not available, falling back to "${candidates[i + 1]}"...`);
         continue;
       }

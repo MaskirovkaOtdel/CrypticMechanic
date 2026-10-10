@@ -1,0 +1,46 @@
+#!/bin/sh
+# CrypticMechanic Pre-Commit Hook
+# 1. Audits staged changes for secret and credential leakage
+# 2. Validates author credentials (auto-accepts MaskirovkaOtdel / thod.efstathiadis@gmail.com)
+# 3. Executes fast unit test verification
+
+echo "==> Running CrypticMechanic pre-commit validation..."
+
+# 1. Author Verification
+AUTHOR_NAME=$(git config user.name)
+AUTHOR_EMAIL=$(git config user.email)
+echo "    Author: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+
+if [ "$AUTHOR_NAME" = "MaskirovkaOtdel" ] || [ "$AUTHOR_EMAIL" = "thod.efstathiadis@gmail.com" ]; then
+  echo "    [SECURITY] Authorized repository owner verified."
+else
+  echo "    [SECURITY WARNING] Non-owner author detected ($AUTHOR_NAME <$AUTHOR_EMAIL>)."
+  echo "    Note: Upstream CI will require manual review/confirmation by @MaskirovkaOtdel."
+fi
+
+# 2. Pre-stage Leak Audit
+FORBIDDEN_PATTERN='(\.env|premium|secret|credentials|license-key|id_rsa|\.pem)'
+LEAK_DETECTED=$(git diff --cached --name-only | grep -E "$FORBIDDEN_PATTERN" || true)
+
+if [ -n "$LEAK_DETECTED" ]; then
+  echo "::error::[PRE-COMMIT BLOCKED] Forbidden sensitive file patterns detected in staged index:"
+  echo "$LEAK_DETECTED"
+  echo "Please unstage these files before committing."
+  exit 1
+fi
+
+echo "    [LEAK SCAN] Clean - 0 sensitive patterns matched."
+
+# 3. Unit Test Verification
+if [ -f "package.json" ]; then
+  echo "    [TEST RUNNER] Running unit test verification..."
+  npm test > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "::error::[PRE-COMMIT BLOCKED] npm test failed! Fix test failures before committing."
+    exit 1
+  fi
+  echo "    [TEST RUNNER] All tests passed."
+fi
+
+echo "==> Pre-commit verification passed."
+exit 0

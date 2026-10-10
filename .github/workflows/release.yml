@@ -1,0 +1,27 @@
+name: Release & 1:1 Tag Dispatch
+
+on:
+  push:
+    tags:
+      - "community-edition-v*"
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish GitHub Release with Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body_path: RELEASE_NOTES.md

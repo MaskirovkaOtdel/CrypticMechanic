@@ -1,0 +1,51 @@
+name: CI Quality Gate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, Test, Build & Leak Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Code Quality & Lint Check
+        run: npm run lint --if-present
+
+      - name: Execute Full Test Suites
+        run: npm test --if-present
+
+      - name: Production Bundle Verification
+        run: npm run build --if-present
+
+      - name: Pre-Stage Secret Leak Audit
+        shell: bash
+        run: |
+          echo "Scanning for sensitive patterns in changed files..."
+          LEAK_MATCHES=$(git diff --name-only origin/${{ github.base_ref || 'main' }}...HEAD 2>/dev/null | grep -E '(\.env|secret|credentials|license-key|id_rsa|\.pem)' || true)
+          if [ -n "$LEAK_MATCHES" ]; then
+            echo "::error::CRITICAL: Sensitive files or credential patterns detected in changeset:"
+            echo "$LEAK_MATCHES"
+            exit 1
+          fi
+          echo "Secret leak audit passed cleanly: 0 sensitive patterns matched."

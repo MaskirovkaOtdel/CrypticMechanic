@@ -114,7 +114,7 @@ jobs:
   sync-pr:
     name: "Automated PR Creation (dev -> main)"
     needs: verify
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    if: "${{ github.ref == 'refs/heads/dev' && github.event_name == 'push' }}"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -137,20 +137,13 @@ jobs:
           fi
 
           echo "No active PR found. Creating Pull Request from dev to main..."
+          PR_BODY="Automated Promotion PR from dev to main following successful CI Quality Gate on branch dev."
+
           gh pr create \
             --base main \
             --head dev \
             --title "chore(release): merge dev into main" \
-            --body "### Automated Promotion PR (dev -> main)
+            --body "$PR_BODY" || echo "Note: PR creation completed or skipped if no diff between branches."
 
-This Pull Request was automatically created following a successful CI Quality Gate on branch \`dev\`.
 
-#### Pre-Flight Checklist Completed
-- [x] Contributor identity verified (@MaskirovkaOtdel)
-- [x] Unit and adversarial test suites passed cleanly
-- [x] Production bundle compiled
-- [x] Secret leak audit passed (0 sensitive patterns matched)
-
----
-*Merging this PR into \`main\` will trigger the Semantic Auto-Release workflow to evaluate commits and cut the appropriate SemVer tag.*" || echo "Note: PR creation completed or skipped if no diff between branches."
 

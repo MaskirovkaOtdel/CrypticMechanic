@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
@@ -110,3 +110,47 @@ jobs:
             exit 1
           fi
           echo "Secret leak audit passed cleanly: 0 sensitive patterns matched."
+
+  sync-pr:
+    name: "Automated PR Creation (dev -> main)"
+    needs: verify
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Ensure Pull Request from dev to main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for existing Pull Request from dev to main..."
+          EXISTING_PR=$(gh pr list --base main --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Pull Request #$EXISTING_PR is already active for dev -> main."
+            exit 0
+          fi
+
+          echo "No active PR found. Creating Pull Request from dev to main..."
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "chore(release): merge dev into main" \
+            --body "### Automated Promotion PR (dev -> main)
+
+This Pull Request was automatically created following a successful CI Quality Gate on branch \`dev\`.
+
+#### Pre-Flight Checklist Completed
+- [x] Contributor identity verified (@MaskirovkaOtdel)
+- [x] Unit and adversarial test suites passed cleanly
+- [x] Production bundle compiled
+- [x] Secret leak audit passed (0 sensitive patterns matched)
+
+---
+*Merging this PR into \`main\` will trigger the Semantic Auto-Release workflow to evaluate commits and cut the appropriate SemVer tag.*" || echo "Note: PR creation completed or skipped if no diff between branches."
+

@@ -1,27 +1,70 @@
-name: Release & 1:1 Tag Dispatch
+name: "Semantic Auto-Release & Tag Dispatch"
 
 on:
   push:
-    tags:
-      - "community-edition-v*"
-      - "v*"
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    name: Publish GitHub Release
+  evaluate-and-release:
+    name: "Evaluate SemVer & Dispatch Release"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository with Full History
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish GitHub Release with Release Notes
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Evaluate Release Worthiness & SemVer
+        id: semver
+        run: node .github/scripts/semantic-release.mjs
+
+      - name: Skip Release Notification
+        if: steps.semver.outputs.should_release != 'true'
+        run: |
+          echo "================================================================"
+          echo "NO RELEASE-WORTHY COMMITS DETECTED."
+          echo "Changeset contains only maintenance/docs/ci commits."
+          echo "Skipping version bump, git tag, and GitHub Release creation."
+          echo "================================================================"
+
+      - name: Update package.json Version
+        if: steps.semver.outputs.should_release == 'true'
+        run: |
+          NEW_VER="${{ steps.semver.outputs.new_version }}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEW_VER';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): bump version to $NEW_VER [skip ci]" || echo "No package.json diff to commit"
+          git push origin main
+
+      - name: Create Git Tag
+        if: steps.semver.outputs.should_release == 'true'
+        run: |
+          NEW_TAG="${{ steps.semver.outputs.new_tag }}"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - name: Publish GitHub Release
+        if: steps.semver.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          body_path: RELEASE_NOTES.md
+          tag_name: ${{ steps.semver.outputs.new_tag }}
+          name: ${{ steps.semver.outputs.new_tag }}
+          body_path: RELEASE_CHANGELOG.md
+          generate_release_notes: false

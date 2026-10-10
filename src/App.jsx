@@ -28,12 +28,11 @@ import './App.css';
 initExtensions();
 
 function formatModelBadge(modelName) {
-  if (!modelName) return '3.5 Flash Lite';
+  if (!modelName) return '3.8 Flash';
+  if (modelName === 'gemini-3.8-flash') return '3.8 Flash';
   if (modelName === 'gemini-3.5-flash-lite' || modelName === 'gemini-3.5-flash-lite-preview') return '3.5 Flash Lite';
   if (modelName === 'gemini-3-flash' || modelName === 'gemini-3-flash-preview') return '3 Flash';
-  if (modelName === 'gemini-3.5-flash' || modelName === 'gemini-3.5-flash-preview') return '3.5 Flash';
   if (modelName === 'gemini-3.1-pro' || modelName === 'gemini-3.1-pro-preview' || modelName === 'gemini-3-pro') return '3.1 Pro';
-  if (modelName === 'gemini-3.5-pro' || modelName === 'gemini-3.5-pro-preview') return '3.5 Pro';
   return modelName.replace(/^gemini-/, '');
 }
 

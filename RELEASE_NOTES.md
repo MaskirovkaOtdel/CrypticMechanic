@@ -12,24 +12,23 @@
 
 ### What's New in v1.4.0
 
-#### 1. Gemini 3 Family Exclusive Model Selection
-- **Exclusive Gemini 3 Catalogue**: The model selection dropdown in Settings is now strictly curated for Google's newest reasoning architectures, removing deprecated 1.x/2.x models from the primary interface.
+#### 1. Verified Gemini 3 Model Selection & Gemini 3.8 Flash Default
+- **Curated Gemini 3 Catalogue**: The model selection dropdown in Settings is strictly aligned with Google's production architectures, eliminating obsolete legacy identifiers and non-existent model strings.
 - **Supported Models**:
-  - `gemini-3.5-flash-lite` (**Default**): High-speed, cost-efficient developer diagnostics optimized for rapid log analysis.
-  - `gemini-3-flash`: Balanced latency and deep diagnostic reasoning.
-  - `gemini-3.5-flash`: Next-gen multimodal reasoning with elevated instruction-following precision.
-  - `gemini-3.1-pro`: Deep architectural debugging and complex root-cause diagnosis.
-  - `gemini-3.5-pro`: Flagship frontier intelligence for intricate polyglot failures.
-  - `Custom Model ID`: Full flexibility to configure custom or fine-tuned Gemini model identifiers.
+  - `gemini-3.8-flash` (**Default**): Google's flagship GA workhorse model, optimized for speed, long-horizon coding diagnostics, and deep reasoning.
+  - `gemini-3.5-flash-lite`: High-throughput, ultra-fast model designed for cost-sensitive and quick log triage.
+  - `gemini-3-flash`: Preview model for rapid general diagnostics (`gemini-3-flash-preview`).
+  - `gemini-3.1-pro`: Preview model for deep architectural debugging and intricate root-cause analysis (`gemini-3.1-pro-preview`).
+  - `Custom Model ID`: Full flexibility to supply custom fine-tuned or newly published Gemini model identifiers.
 
 #### 2. Transparent Default Migration & Cross-Provider Hygiene
-- **One-Time Default Migration**: Existing installations storing legacy or deprecated model IDs in `localStorage` automatically migrate to `gemini-3.5-flash-lite` on startup without user intervention.
-- **Cross-Provider Configuration Sanitization**: If local model strings (e.g., Ollama identifiers like `llama3:latest` or `deepseek-r1:8b`) are detected in Gemini settings, they are safely neutralized and defaulted to `gemini-3.5-flash-lite`, preventing malformed cloud API requests.
+- **One-Time Default Migration**: Existing installations storing legacy (1.x, 2.x) or deprecated model IDs in `localStorage` automatically migrate to the recommended `gemini-3.8-flash` default on startup without user intervention.
+- **Cross-Provider Configuration Sanitization**: If local model strings (e.g., Ollama identifiers like `llama3:latest` or `deepseek-r1:8b`) are detected in Gemini settings, they are safely neutralized and defaulted to `gemini-3.8-flash`, preventing malformed cloud API requests.
 
 #### 3. Resilient Gemini 3 Fallback Chains
-- **Automated Fallback Cascading**: If an active API call encounters a 404, model not found, or unsupported model error (`isModelUnavailableError`), the diagnostic engine automatically waterfalls through adjacent Gemini 3 candidates (`gemini-3.5-flash-lite` → `gemini-3-flash` → `gemini-3.5-flash` → `gemini-3.1-pro` → `gemini-3.5-pro`) before surfacing an error.
-- **Robust Model Resolution**: Model aliases cleanly resolve to their official Google API preview endpoints (e.g., `gemini-3.5-flash-lite` → `gemini-3.5-flash-lite-preview`).
-- **Comprehensive Unit Testing**: Validated by 20 dedicated unit tests covering aliasing, fallback chains, error detection, and migration in `tests/model_resolution_and_fallback.test.mjs`.
+- **Automated Fallback Cascading**: If an active API call encounters a 404, model not found, or unsupported model error (`isModelUnavailableError`), the diagnostic engine automatically waterfalls through adjacent verified Gemini 3 candidates (`gemini-3.8-flash` → `gemini-3.5-flash-lite-preview` → `gemini-3-flash-preview` → `gemini-3.1-pro-preview`) before surfacing an error.
+- **Robust Model Resolution**: Model aliases cleanly resolve to their official Google API endpoints.
+- **Comprehensive Unit Testing**: Validated by dedicated unit tests covering aliasing, fallback chains, error detection, and migration in `tests/model_resolution_and_fallback.test.mjs`.
 
 #### 4. CrypticMechanic Pro Preview Card
 - **Subtle Pro Showcase**: A non-intrusive information card in the Settings drawer highlighting advanced enterprise capabilities available in CrypticMechanic Pro.

@@ -10,11 +10,10 @@ const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quic
 const TONE_OPTIONS = ['Professional', 'Friendly', 'ELI5'];
 
 const MODEL_OPTIONS = [
-  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Recommended - Ultra-Fast & Lightweight)' },
-  { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Fast & General Diagnostics)' },
-  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Balanced Speed & Reasoning)' },
-  { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Deep Reasoning & Complex Stacks)' },
-  { value: 'gemini-3.5-pro', label: 'Gemini 3.5 Pro (Advanced Architecture & System Analysis)' },
+  { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Default - High-Speed, Deep Reasoning & Coding)' },
+  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Ultra-Fast & Cost-Efficient)' },
+  { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Preview - General Diagnostics)' },
+  { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Preview - Complex Reasoning & Deep Stacks)' },
   { value: 'custom', label: 'Custom Model ID...' },
 ];
 
@@ -37,22 +36,23 @@ export default function SettingsPanel({
   };
 
   const PRESET_MAPPINGS = {
+    'gemini-3.8-flash': 'gemini-3.8-flash',
     'gemini-3.5-flash-lite-preview': 'gemini-3.5-flash-lite',
     'gemini-3-flash-preview': 'gemini-3-flash',
-    'gemini-3.5-flash-preview': 'gemini-3.5-flash',
     'gemini-3.1-pro-preview': 'gemini-3.1-pro',
     'gemini-3-pro': 'gemini-3.1-pro',
-    'gemini-3.5-pro-preview': 'gemini-3.5-pro',
-    'gemini-2.5-flash': 'gemini-3.5-flash-lite',
-    'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite',
-    'gemini-2.0-flash': 'gemini-3.5-flash-lite',
-    'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
+    'gemini-3.5-flash': 'gemini-3.8-flash',
+    'gemini-3.5-pro': 'gemini-3.8-flash',
+    'gemini-2.5-flash': 'gemini-3.8-flash',
+    'gemini-2.5-flash-lite': 'gemini-3.8-flash',
+    'gemini-2.0-flash': 'gemini-3.8-flash',
+    'gemini-2.0-flash-lite': 'gemini-3.8-flash',
   };
   const normalizedModel = PRESET_MAPPINGS[settings.model] || settings.model;
   const isKnownPreset = MODEL_OPTIONS.some((m) => m.value === normalizedModel && m.value !== 'custom');
   const selectedModelValue = isKnownPreset
     ? normalizedModel
-    : (settings.model ? 'custom' : 'gemini-3.5-flash-lite');
+    : (settings.model ? 'custom' : 'gemini-3.8-flash');
 
   const customModelValue =
     settings.customModel || (!isKnownPreset && settings.model && settings.model !== 'custom' ? settings.model : '');

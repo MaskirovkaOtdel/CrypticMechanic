@@ -8,12 +8,12 @@ import './SettingsPanel.css';
 const DETAIL_OPTIONS = ['Concise', 'Standard', 'Thorough'];
 const FORMAT_OPTIONS = ['Diagnosis + Fixes', 'Step-by-Step', 'Root Cause', 'Quick Fix'];
 const TONE_OPTIONS = ['Professional', 'Friendly', 'ELI5'];
+const THINKING_LEVEL_OPTIONS = ['Auto', 'Low', 'Medium', 'High', 'Off'];
 
 const MODEL_OPTIONS = [
-  { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Default - High-Speed, Deep Reasoning & Coding)' },
-  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Ultra-Fast & Cost-Efficient)' },
-  { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Preview - General Diagnostics)' },
-  { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Preview - Complex Reasoning & Deep Stacks)' },
+  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Default - Low Consumption / Fast Troubleshooting)' },
+  { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Optimal for Difficult & In-Depth Issues)' },
+  { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Maximum Capacity Diagnostic Processing)' },
   { value: 'custom', label: 'Custom Model ID...' },
 ];
 
@@ -36,23 +36,26 @@ export default function SettingsPanel({
   };
 
   const PRESET_MAPPINGS = {
-    'gemini-3.8-flash': 'gemini-3.8-flash',
+    'gemini-3.5-flash-lite': 'gemini-3.5-flash-lite',
     'gemini-3.5-flash-lite-preview': 'gemini-3.5-flash-lite',
-    'gemini-3-flash-preview': 'gemini-3-flash',
+    'gemini-3.8-flash': 'gemini-3.8-flash',
+    'gemini-3.1-pro': 'gemini-3.1-pro',
     'gemini-3.1-pro-preview': 'gemini-3.1-pro',
     'gemini-3-pro': 'gemini-3.1-pro',
+    'gemini-3-flash': 'gemini-3.8-flash',
+    'gemini-3-flash-preview': 'gemini-3.8-flash',
     'gemini-3.5-flash': 'gemini-3.8-flash',
-    'gemini-3.5-pro': 'gemini-3.8-flash',
-    'gemini-2.5-flash': 'gemini-3.8-flash',
-    'gemini-2.5-flash-lite': 'gemini-3.8-flash',
-    'gemini-2.0-flash': 'gemini-3.8-flash',
-    'gemini-2.0-flash-lite': 'gemini-3.8-flash',
+    'gemini-3.5-pro': 'gemini-3.1-pro',
+    'gemini-2.5-flash': 'gemini-3.5-flash-lite',
+    'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite',
+    'gemini-2.0-flash': 'gemini-3.5-flash-lite',
+    'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
   };
   const normalizedModel = PRESET_MAPPINGS[settings.model] || settings.model;
   const isKnownPreset = MODEL_OPTIONS.some((m) => m.value === normalizedModel && m.value !== 'custom');
   const selectedModelValue = isKnownPreset
     ? normalizedModel
-    : (settings.model ? 'custom' : 'gemini-3.8-flash');
+    : (settings.model ? 'custom' : 'gemini-3.5-flash-lite');
 
   const customModelValue =
     settings.customModel || (!isKnownPreset && settings.model && settings.model !== 'custom' ? settings.model : '');
@@ -180,7 +183,7 @@ export default function SettingsPanel({
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Enter custom model ID (e.g. gemini-3.5-flash-lite, gemini-3-flash, gemini-3.1-pro)..."
+                    placeholder="Enter custom model ID (e.g. gemini-3.5-flash-lite, gemini-3.8-flash, gemini-3.1-pro)..."
                     value={customModelValue}
                     onChange={(e) => {
                       const nextCustom = e.target.value;
@@ -196,6 +199,31 @@ export default function SettingsPanel({
                   </p>
                 </div>
               )}
+
+              {/* Thinking / Reasoning Level */}
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span>Thinking / Reasoning Level</span>
+                  <span style={{ fontSize: '11px', opacity: 0.75, fontWeight: 'normal' }}>
+                    {settings.thinkingLevel === 'Off' ? '0 budget (Fastest)' : settings.thinkingLevel === 'Auto' ? 'Dynamic' : `${settings.thinkingLevel} reasoning budget`}
+                  </span>
+                </label>
+                <div className="segmented-control">
+                  {THINKING_LEVEL_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={(settings.thinkingLevel || 'Auto') === opt ? 'active' : ''}
+                      onClick={() => update('thinkingLevel', opt)}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <p className="setting-desc" style={{ marginTop: '4px', fontSize: '11px' }}>
+                  Controls the AI thinking token budget. 'Auto' adapts dynamically; 'Off' disables thinking tokens for minimal latency.
+                </p>
+              </div>
             </div>
           )}
 

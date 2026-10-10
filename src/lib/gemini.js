@@ -4,47 +4,45 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  * Canonical model aliases mapping friendly or legacy IDs to valid Google Generative AI endpoints.
  */
 export const MODEL_ALIASES = {
-  // Verified Gemini 3 series models
-  'gemini-3.8-flash': 'gemini-3.8-flash',
-  'gemini-3.5-flash-lite': 'gemini-3.5-flash-lite-preview',
-  'gemini-3-flash': 'gemini-3-flash-preview',
+  // Latest verified model from each Gemini 3 line
+  'gemini-3.5-flash-lite': 'gemini-3.5-flash-lite-preview', // Default: low consumption / fast troubleshooting
+  'gemini-3.8-flash': 'gemini-3.8-flash',                   // Flash line: in-depth / complex coding exploration
+  'gemini-3.1-pro': 'gemini-3.1-pro-preview',               // Pro line: maximum diagnostic capacity
   'gemini-3-pro': 'gemini-3.1-pro-preview',
-  'gemini-3.1-pro': 'gemini-3.1-pro-preview',
 
-  // Legacy, deprecated, or removed model IDs transparently migrate to Gemini 3.8 Flash default
+  // Legacy, deprecated, or older iterations transparently migrate to latest line equivalents
+  'gemini-3-flash': 'gemini-3.8-flash',
+  'gemini-3-flash-preview': 'gemini-3.8-flash',
   'gemini-3.5-flash': 'gemini-3.8-flash',
-  'gemini-3.5-pro': 'gemini-3.8-flash',
-  'gemini-2.5-flash': 'gemini-3.8-flash',
-  'gemini-2.5-flash-lite': 'gemini-3.8-flash',
-  'gemini-2.0-flash': 'gemini-3.8-flash',
-  'gemini-2.0-flash-lite': 'gemini-3.8-flash',
+  'gemini-3.5-pro': 'gemini-3.1-pro-preview',
+  'gemini-2.5-flash': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.0-flash': 'gemini-3.5-flash-lite-preview',
+  'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite-preview',
   'gemini-2.5-pro': 'gemini-3.1-pro-preview',
-  'gemini-1.5-flash': 'gemini-3.8-flash',
+  'gemini-1.5-flash': 'gemini-3.5-flash-lite-preview',
   'gemini-1.5-pro': 'gemini-3.1-pro-preview',
-  'gemini-pro': 'gemini-3.8-flash',
-  'gemini-1.0-pro': 'gemini-3.8-flash',
-  'gemini-1.5-flash-latest': 'gemini-3.8-flash',
+  'gemini-pro': 'gemini-3.5-flash-lite-preview',
+  'gemini-1.0-pro': 'gemini-3.5-flash-lite-preview',
+  'gemini-1.5-flash-latest': 'gemini-3.5-flash-lite-preview',
   'gemini-1.5-pro-latest': 'gemini-3.1-pro-preview',
-  'gemini-2.0-flash-exp': 'gemini-3-flash-preview',
-  'gemini-exp-1206': 'gemini-3-flash-preview',
+  'gemini-2.0-flash-exp': 'gemini-3.8-flash',
+  'gemini-exp-1206': 'gemini-3.8-flash',
 };
 
 /**
  * Fallback chains when a selected model returns 404 (e.g. preview access not allowlisted).
- * Exclusively restricted to verified Gemini 3 family models.
+ * Exclusively restricted to latest verified Gemini 3 models.
  */
 export const MODEL_FALLBACKS = {
-  'gemini-3.8-flash': ['gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3.5-flash-lite-preview': ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3.5-flash-lite': ['gemini-3.8-flash', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3-flash-preview': ['gemini-3.8-flash', 'gemini-3.5-flash-lite-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3-flash': ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3.1-pro-preview': ['gemini-3.8-flash', 'gemini-3.5-flash-lite-preview', 'gemini-3-flash-preview'],
-  'gemini-3.1-pro': ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3.1-pro-preview'],
-  'gemini-3-pro': ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.5-flash-lite': ['gemini-3.5-flash-lite-preview', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'],
+  'gemini-3.5-flash-lite-preview': ['gemini-3.8-flash', 'gemini-3.1-pro-preview'],
+  'gemini-3.8-flash': ['gemini-3.5-flash-lite-preview', 'gemini-3.1-pro-preview'],
+  'gemini-3.1-pro-preview': ['gemini-3.8-flash', 'gemini-3.5-flash-lite-preview'],
+  'gemini-3.1-pro': ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite-preview'],
 };
 
-let lastSuccessfulModel = 'gemini-3.8-flash';
+let lastSuccessfulModel = 'gemini-3.5-flash-lite';
 
 export function getLastSuccessfulModel() {
   return lastSuccessfulModel;
@@ -76,14 +74,29 @@ export function isModelUnavailableError(err) {
 }
 
 /**
+ * Resolve thinking budget in tokens based on user preference.
+ */
+export function resolveThinkingBudget(level) {
+  switch (level) {
+    case 'Off': return 0;
+    case 'Low': return 1024;
+    case 'Medium': return 4096;
+    case 'High': return 8192;
+    case 'Auto':
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Resolve the effective model identifier based on settings.
  */
 export function resolveModelName(settings = {}) {
   let raw = settings.model === 'custom'
-    ? (settings.customModel || '').trim() || 'gemini-3.8-flash'
-    : (settings.model || '').trim() || 'gemini-3.8-flash';
+    ? (settings.customModel || '').trim() || 'gemini-3.5-flash-lite'
+    : (settings.model || '').trim() || 'gemini-3.5-flash-lite';
 
-  // Cross-provider hygiene: If an Ollama or non-Gemini model is set, default to gemini-3.8-flash
+  // Cross-provider hygiene: If an Ollama or non-Gemini model is set, default to gemini-3.5-flash-lite
   if (
     raw.includes(':') ||
     raw.startsWith('llama') ||
@@ -91,7 +104,7 @@ export function resolveModelName(settings = {}) {
     raw.startsWith('mistral') ||
     raw.startsWith('deepseek')
   ) {
-    raw = 'gemini-3.8-flash';
+    raw = 'gemini-3.5-flash-lite';
   }
 
   return MODEL_ALIASES[raw] || raw;
@@ -197,15 +210,21 @@ ${fence}`;
 export function getGenerativeModelWithSpecificModel(apiKey, settings, specificModel) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const systemInstruction = buildSystemInstruction(settings);
+  const budget = resolveThinkingBudget(settings?.thinkingLevel);
+
+  const generationConfig = {
+    temperature: 0.2,
+  };
+  if (budget !== undefined) {
+    generationConfig.thinkingConfig = { thinkingBudget: budget };
+  }
 
   return {
     modelName: specificModel,
     model: genAI.getGenerativeModel({
       model: specificModel,
       systemInstruction,
-      generationConfig: {
-        temperature: 0.2,
-      },
+      generationConfig,
     }),
   };
 }

@@ -2,6 +2,38 @@
 
 ---
 
+## CrypticMechanic v1.4.1
+
+### Milestone Overview
+
+**CrypticMechanic v1.4.1** refines the AI engine architecture by streamlining the catalogue to strictly the latest model from each **Gemini 3** line, introducing an interactive **Thinking / Reasoning Level selector** for granular cognitive budget control across all models (including custom IDs), and modernizing project documentation.
+
+---
+
+### What's New in v1.4.1
+
+#### 1. Streamlined Gemini 3 Lineup with 3.5 Flash Lite Default
+- **Strict Latest-From-Each-Line Architecture**: Removed intermediate and deprecated model IDs (`gemini-3-flash`, `gemini-3.5-flash`, `gemini-3.5-pro`), retaining strictly the premier model from each Google production tier:
+  - `gemini-3.5-flash-lite` (**Default**): Low consumption, high-throughput troubleshooting engine for fast daily log triage.
+  - `gemini-3.8-flash`: In-depth analysis engine optimal for difficult, subtle, and multi-file code issues.
+  - `gemini-3.1-pro`: High-capacity engine for massive stack traces, complex architectures, and full dependency graphs.
+  - `custom`: Dedicated input for custom fine-tuned or experimental Gemini endpoints.
+- **Updated Model Aliasing & Fallbacks**: Waterfall fallback chains updated to prioritize the latest models while safely migrating legacy identifiers.
+
+#### 2. Thinking / Reasoning Level Selector
+- **Configurable Reasoning Token Budget**: New segmented control in the Settings Panel allowing developers to tune the internal reasoning depth for their models:
+  - **Auto**: Dynamic engine-adapted reasoning budget (default).
+  - **Low**: 1,024 tokens.
+  - **Medium**: 4,096 tokens.
+  - **High**: 8,192 tokens.
+  - **Off**: 0 tokens (disables thinking tokens for minimal latency and maximum speed).
+- **Universal Provider Compatibility**: Fully wired through `@google/generative-ai` `thinkingConfig: { thinkingBudget }`, functioning identically for preset models and custom model IDs.
+
+#### 3. Modernized Project Documentation
+- **Comprehensive README Overhaul**: Complete documentation of Gemini 3 models, thinking level controls, terminal log cleaner, runtime detection heuristics, PWA offline capabilities, and containerized Docker workflows.
+
+---
+
 ## CrypticMechanic v1.4.0
 
 ### Milestone Overview

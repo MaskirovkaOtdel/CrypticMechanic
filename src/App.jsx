@@ -28,11 +28,11 @@ import './App.css';
 initExtensions();
 
 function formatModelBadge(modelName) {
-  if (!modelName) return '3.8 Flash';
-  if (modelName === 'gemini-3.8-flash') return '3.8 Flash';
+  if (!modelName) return '3.5 Flash Lite';
   if (modelName === 'gemini-3.5-flash-lite' || modelName === 'gemini-3.5-flash-lite-preview') return '3.5 Flash Lite';
-  if (modelName === 'gemini-3-flash' || modelName === 'gemini-3-flash-preview') return '3 Flash';
+  if (modelName === 'gemini-3.8-flash') return '3.8 Flash';
   if (modelName === 'gemini-3.1-pro' || modelName === 'gemini-3.1-pro-preview' || modelName === 'gemini-3-pro') return '3.1 Pro';
+  if (modelName === 'gemini-3-flash' || modelName === 'gemini-3-flash-preview') return '3 Flash';
   return modelName.replace(/^gemini-/, '');
 }
 
@@ -180,7 +180,7 @@ function App() {
     reader.readAsText(file);
   };
 
-  const standardChips = ['All', '2.5 Flash', '2.0 Flash', '1.5 Flash', '3 Flash'];
+  const standardChips = ['All', '3.5 Flash Lite', '3.8 Flash', '3.1 Pro'];
   const dynamicModelChips = Array.from(new Set(
     history.map((item) => formatModelBadge(item.model)).filter(Boolean)
   )).filter((badge) => !standardChips.includes(badge));

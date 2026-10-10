@@ -1,4 +1,4 @@
-name: "CI Quality Gate"
+name: "CI Quality & Security Gate"
 
 on:
   push:
@@ -10,9 +10,71 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
+  author-security-gate:
+    name: "Author and Contributor Verification"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Verify Committer and Author Authorization
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_USERNAME="MaskirovkaOtdel"
+          OWNER_EMAIL="thod.efstathiadis@gmail.com"
+
+          ACTOR="${{ github.actor }}"
+          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' 2>/dev/null || echo "")
+          COMMIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' 2>/dev/null || echo "")
+
+          echo "Actor: $ACTOR"
+          echo "Commit Author Name: $COMMIT_AUTHOR_NAME"
+          echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
+
+          if [ "$ACTOR" = "$OWNER_USERNAME" ] || [ "$COMMIT_AUTHOR_EMAIL" = "$OWNER_EMAIL" ]; then
+            echo "================================================================"
+            echo "VERIFIED REPOSITORY OWNER AUTHORIZATION (@MaskirovkaOtdel)"
+            echo "Committer credentials automatically accepted."
+            echo "================================================================"
+            exit 0
+          fi
+
+          echo "================================================================"
+          echo "EXTERNAL CONTRIBUTOR DETECTED: $ACTOR <$COMMIT_AUTHOR_EMAIL>"
+          echo "================================================================"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.number }}"
+            echo "Checking PR #$PR_NUMBER for maintainer approval..."
+
+            REVIEWS=$(gh pr view "$PR_NUMBER" --json reviews -q '.reviews[] | select(.author.login=="MaskirovkaOtdel") | .state' 2>/dev/null || echo "")
+            LABELS=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || echo "")
+
+            if echo "$REVIEWS" | grep -q "APPROVED" || echo "$LABELS" | grep -q "owner-approved"; then
+              echo "3rd-party contribution confirmed and approved by @MaskirovkaOtdel."
+              exit 0
+            fi
+
+            echo "::error::Third-party PR requires confirmation and approved review by @MaskirovkaOtdel."
+            exit 1
+          else
+            echo "::error::Direct pushes by unauthorized 3rd-party accounts are blocked. Please submit a Pull Request."
+            exit 1
+          fi
+
   verify:
     name: "Lint, Test, Build and Leak Scan"
+    needs: author-security-gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
@@ -24,10 +86,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Code Quality and Lint Check
         run: npm run lint --if-present

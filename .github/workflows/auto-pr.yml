@@ -1,0 +1,39 @@
+name: "Automated PR Sync"
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-pr:
+    name: "Ensure PR (dev -> main)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Ensure Pull Request from dev to main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for existing Pull Request from dev to main..."
+          EXISTING_PR=$(gh pr list --base main --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Pull Request #$EXISTING_PR is already active for dev -> main."
+            exit 0
+          fi
+
+          echo "No active PR found. Creating Pull Request from dev to main..."
+          PR_BODY="Automated Promotion PR from dev to main following verified changes on branch dev."
+
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "chore(release): merge dev into main" \
+            --body "$PR_BODY" || echo "Note: PR creation completed or skipped if no diff between branches."

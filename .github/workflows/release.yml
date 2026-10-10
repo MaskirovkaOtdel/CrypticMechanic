@@ -68,3 +68,15 @@ jobs:
           name: ${{ steps.semver.outputs.new_tag }}
           body_path: RELEASE_CHANGELOG.md
           generate_release_notes: false
+
+      - name: Synchronize dev branch with main
+        run: |
+          echo "Synchronizing dev branch with main..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin dev
+          git checkout dev
+          git merge origin/main --ff-only || git merge -m "chore(sync): sync main into dev [skip ci]" origin/main
+          git push origin dev
+          echo "dev branch successfully synchronized with main."
+

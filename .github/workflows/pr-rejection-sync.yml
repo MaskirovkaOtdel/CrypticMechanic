@@ -1,0 +1,34 @@
+name: "PR Rejection Sync (Reset dev to main)"
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  reset-dev-if-rejected:
+    name: "Reset dev if PR was Rejected"
+    if: "!github.event.pull_request.merged && github.event.pull_request.head.ref == 'dev'"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reset dev branch to main
+        shell: bash
+        run: |
+          echo "Pull Request was closed without merging (REJECTED)."
+          echo "Resetting branch 'dev' back to 'main'..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          git checkout dev
+          git reset --hard origin/main
+          git push --force origin dev
+          echo "Branch 'dev' successfully reset to match 'main'."

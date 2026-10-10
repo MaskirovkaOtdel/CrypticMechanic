@@ -1,12 +1,10 @@
-name: Contributor & Commit Security Gate
+name: "Contributor and Commit Security Gate"
 
 on:
   push:
     branches: ["**"]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
-  pull_request_review:
-    types: [submitted, dismissed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,7 +17,7 @@ permissions:
 
 jobs:
   verify-author:
-    name: Verify Author & Owner Authorization
+    name: "Verify Author and Owner Authorization"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Tree
@@ -27,7 +25,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Inspect Actor & Commit Signatures
+      - name: Inspect Actor and Commit Signatures
         id: check
         shell: bash
         run: |
@@ -56,7 +54,7 @@ jobs:
         shell: bash
         run: |
           echo "================================================================"
-          echo "✅ VERIFIED REPOSITORY OWNER AUTHORIZATION"
+          echo "VERIFIED REPOSITORY OWNER AUTHORIZATION"
           echo "Actor: ${{ steps.check.outputs.actor }}"
           echo "Author Email: ${{ steps.check.outputs.author_email }}"
           echo "Status: Automatically approved. All checks cleared."
@@ -88,7 +86,7 @@ jobs:
 
           if [ "$HAS_LABEL" = "true" ] || [ "$IS_APPROVED_BY_OWNER" = "true" ]; then
             echo "================================================================"
-            echo "✅ 3rd-party contribution confirmed & approved by @MaskirovkaOtdel."
+            echo "3rd-party contribution confirmed and approved by @MaskirovkaOtdel."
             echo "Security gate passed."
             echo "================================================================"
             exit 0

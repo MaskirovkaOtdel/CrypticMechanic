@@ -4,7 +4,8 @@ export const DEFAULT_SETTINGS = {
   detail: 'Standard',
   format: 'Diagnosis + Fixes',
   tone: 'Professional',
-  model: 'gemini-3.8-flash',
+  model: 'gemini-3.5-flash-lite',
+  thinkingLevel: 'Auto',
   customModel: '',
   theme: 'midnight-terminal',
   saveHistory: true,
@@ -18,19 +19,21 @@ export function loadSettings() {
     const saved = localStorage.getItem('CM_SETTINGS');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate legacy deprecated models (2.x, 1.x, or old/invalid presets) to modern Gemini 3.8 Flash default
+      // Migrate legacy deprecated models (2.x, 1.x, or old/invalid presets) to modern Gemini 3.5 Flash Lite default
       if (
         !parsed.model ||
         parsed.model.startsWith('gemini-2') ||
         parsed.model.startsWith('gemini-1') ||
         parsed.model === 'gemini-pro' ||
-        parsed.model === 'gemini-3.5-flash' ||
         parsed.model === 'gemini-3.5-pro'
       ) {
-        parsed.model = 'gemini-3.8-flash';
+        parsed.model = 'gemini-3.5-flash-lite';
         try {
           localStorage.setItem('CM_SETTINGS', JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
         } catch { /* ignore */ }
+      }
+      if (!parsed.thinkingLevel) {
+        parsed.thinkingLevel = 'Auto';
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
@@ -180,7 +183,7 @@ export function importHistoryFromJSON(jsonString) {
         timestamp: item.timestamp || new Date().toISOString(),
         logs: item.logs,
         result: item.result || item.diagnosis || '',
-        model: item.model || 'gemini-3.8-flash',
+        model: item.model || 'gemini-3.5-flash-lite',
         provider: item.provider || 'gemini',
       });
     }

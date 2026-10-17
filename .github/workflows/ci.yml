@@ -16,68 +16,11 @@ permissions:
   issues: write
 
 jobs:
-  author-security-gate:
-    name: "Author and Contributor Verification"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Verify Committer and Author Authorization
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          OWNER_USERNAME="MaskirovkaOtdel"
-          OWNER_EMAIL="thod.efstathiadis@gmail.com"
-
-          ACTOR="${{ github.actor }}"
-          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' 2>/dev/null || echo "")
-          COMMIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' 2>/dev/null || echo "")
-
-          echo "Actor: $ACTOR"
-          echo "Commit Author Name: $COMMIT_AUTHOR_NAME"
-          echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
-
-          if [ "$ACTOR" = "$OWNER_USERNAME" ] || [ "$COMMIT_AUTHOR_EMAIL" = "$OWNER_EMAIL" ]; then
-            echo "================================================================"
-            echo "VERIFIED REPOSITORY OWNER AUTHORIZATION (@MaskirovkaOtdel)"
-            echo "Committer credentials automatically accepted."
-            echo "================================================================"
-            exit 0
-          fi
-
-          echo "================================================================"
-          echo "EXTERNAL CONTRIBUTOR DETECTED: $ACTOR <$COMMIT_AUTHOR_EMAIL>"
-          echo "================================================================"
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUMBER="${{ github.event.number }}"
-            echo "Checking PR #$PR_NUMBER for maintainer approval..."
-
-            REVIEWS=$(gh pr view "$PR_NUMBER" --json reviews -q '.reviews[] | select(.author.login=="MaskirovkaOtdel") | .state' 2>/dev/null || echo "")
-            LABELS=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || echo "")
-
-            if echo "$REVIEWS" | grep -q "APPROVED" || echo "$LABELS" | grep -q "owner-approved"; then
-              echo "3rd-party contribution confirmed and approved by @MaskirovkaOtdel."
-              exit 0
-            fi
-
-            echo "::error::Third-party PR requires confirmation and approved review by @MaskirovkaOtdel."
-            exit 1
-          else
-            echo "::error::Direct pushes by unauthorized 3rd-party accounts are blocked. Please submit a Pull Request."
-            exit 1
-          fi
-
   verify:
     name: "Lint, Test, Build and Leak Scan"
-    needs: author-security-gate
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source
+      - name: Checkout Source with Full History
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -103,7 +46,9 @@ jobs:
         shell: bash
         run: |
           echo "Scanning for sensitive patterns in changed files..."
-          LEAK_MATCHES=$(git diff --name-only origin/${{ github.base_ref || 'main' }}...HEAD 2>/dev/null | grep -E '(\.env|secret|credentials|license-key|id_rsa|\.pem)' || true)
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          git fetch origin "$BASE_REF" 2>/dev/null || true
+          LEAK_MATCHES=$(git diff --name-only origin/"$BASE_REF"...HEAD 2>/dev/null | grep -E '(\.env|secret|credentials|license-key|id_rsa|\.pem)' || true)
           if [ -n "$LEAK_MATCHES" ]; then
             echo "::error::CRITICAL: Sensitive files or credential patterns detected in changeset:"
             echo "$LEAK_MATCHES"
@@ -111,6 +56,120 @@ jobs:
           fi
           echo "Secret leak audit passed cleanly: 0 sensitive patterns matched."
 
+  author-security-gate:
+    name: "Author and Contributor Verification"
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      is_owner: ${{ steps.gate.outputs.is_owner }}
+    steps:
+      - name: Checkout Repository with Full History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify Committer Authorization & Route Pipeline
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_USERNAME="MaskirovkaOtdel"
+          OWNER_EMAIL="thod.efstathiadis@gmail.com"
 
+          ACTOR="${{ github.actor }}"
+          COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' 2>/dev/null || echo "")
+          COMMIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' 2>/dev/null || echo "")
+
+          echo "Actor: $ACTOR"
+          echo "Commit Author Name: $COMMIT_AUTHOR_NAME"
+          echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Target Ref: ${{ github.ref }}"
+
+          # ------------------------------------------------------------
+          # CASE 1: VERIFIED REPOSITORY OWNER
+          # ------------------------------------------------------------
+          if [ "$ACTOR" = "$OWNER_USERNAME" ] || [ "$COMMIT_AUTHOR_EMAIL" = "$OWNER_EMAIL" ]; then
+            echo "================================================================"
+            echo "VERIFIED REPOSITORY OWNER AUTHORIZATION (@MaskirovkaOtdel)"
+            echo "Quality checks passed. Authorized for automated merge routing."
+            echo "================================================================"
+            echo "is_owner=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ------------------------------------------------------------
+          # CASE 2: EXTERNAL / THIRD-PARTY CONTRIBUTOR
+          # ------------------------------------------------------------
+          echo "================================================================"
+          echo "EXTERNAL CONTRIBUTOR DETECTED: $ACTOR <$COMMIT_AUTHOR_EMAIL>"
+          echo "Auto-merge disabled. Enforcing PR review gating."
+          echo "================================================================"
+          echo "is_owner=false" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.number }}"
+            echo "Checking PR #$PR_NUMBER for maintainer approval..."
+
+            REVIEWS=$(gh pr view "$PR_NUMBER" --json reviews -q '.reviews[] | select(.author.login=="MaskirovkaOtdel") | .state' 2>/dev/null || echo "")
+            LABELS=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || echo "")
+
+            if echo "$REVIEWS" | grep -q "APPROVED" || echo "$LABELS" | grep -q "owner-approved"; then
+              echo "3rd-party contribution confirmed and approved by @MaskirovkaOtdel."
+              exit 0
+            fi
+
+            echo "::error::Third-party PR requires confirmation and approved review by @MaskirovkaOtdel before merge is permitted."
+            exit 1
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+            echo "External push on branch $BRANCH_NAME. Checking for open PR targeting main..."
+            EXISTING_PR=$(gh pr list --base main --head "$BRANCH_NAME" --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+            if [ -z "$EXISTING_PR" ]; then
+              echo "Opening Pull Request targeting main for external contributor..."
+              gh pr create \
+                --base main \
+                --head "$BRANCH_NAME" \
+                --title "contrib: external contribution on $BRANCH_NAME by @$ACTOR" \
+                --body "Automated contribution PR. Quality checks passed. Requires review approval by @MaskirovkaOtdel before merging." \
+                --reviewer "MaskirovkaOtdel" || true
+            fi
+            echo "::notice::Third-party changes staged in PR. Direct push auto-merge blocked pending review."
+            exit 0
+          fi
+
+  owner-auto-merge:
+    name: "Owner Auto-Merge Pipeline"
+    needs: [verify, author-security-gate]
+    if: needs.author-security-gate.outputs.is_owner == 'true' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository with Full History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fast-Forward Dev into Main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Automated Owner Merge: Fast-forwarding dev into main..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          git checkout main
+          git merge dev --ff-only || git merge dev -m "chore(merge): auto-merge dev into main [skip ci]"
+          git push origin main
+          echo "Successfully merged dev into main."
+
+          # If an open PR from dev to main exists, merge or close it cleanly
+          OPEN_PR=$(gh pr list --base main --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$OPEN_PR" ]; then
+            echo "Cleaning up active PR #$OPEN_PR..."
+            gh pr close "$OPEN_PR" --comment "Merged automatically via owner verified CI/CD pipeline." 2>/dev/null || true
+          fi
 

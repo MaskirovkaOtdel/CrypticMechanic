@@ -2,6 +2,22 @@
 
 ---
 
+## CrypticMechanic v1.5.1
+
+### 🐛 Bug Fixes & Performance
+- fix(release): synchronize RELEASE_NOTES.md and filter merge commits in semantic engine (ec6aee5)
+
+### 🛠️ Maintenance & Refactoring
+- test(engine): expand automated functional use cases to 115 tests and harden nginx headers (ef43f50)
+- ci(governance): refactor unified ci pipeline with checks first and owner auto-merge (8e048f1)
+- ci(sync): add two-way branch synchronization on PR merge and rejection (08ad3c7)
+- ci: isolate automated PR sync to dedicated dev workflow to eliminate skipped status on main (44a0ee3)
+
+
+**Full Changelog**: https://github.com/MaskirovkaOtdel/CrypticMechanic/compare/community-edition-v1.5.0...community-edition-v1.5.1
+
+---
+
 ## CrypticMechanic v1.5.0
 
 ### Milestone Overview

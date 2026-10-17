@@ -2,6 +2,49 @@
 
 ---
 
+## CrypticMechanic v1.5.0
+
+### Milestone Overview
+
+**CrypticMechanic v1.5.0** delivers a major upgrade to the diagnostic intelligence pipeline, fully transitioning to a streamlined **Gemini 3** model architecture with `gemini-3.5-flash-lite` as the primary default. This release introduces automated local security hooks, seamless legacy default migration, fine-grained Thinking/Reasoning token budget controls, and comprehensive performance optimizations across terminal log processing and bundle execution.
+
+---
+
+### What's New in v1.5.0
+
+#### 1. Streamlined Gemini 3 Model Catalogue & Verified Defaults
+- **Curated Production Architecture**: Retains exclusively the latest verified model from each Google production tier, removing intermediate and deprecated endpoints:
+  - `gemini-3.5-flash-lite` (**Default**): High-throughput, low-latency, and cost-effective engine for rapid daily error triage.
+  - `gemini-3.8-flash`: High-performance diagnostic engine optimized for complex, subtle, and multi-file code defects.
+  - `gemini-3.1-pro`: Premier deep-reasoning engine designed for massive stack traces and extensive architectural analysis.
+  - `custom`: Dedicated input field supporting custom fine-tuned or experimental Gemini endpoints.
+- **Dynamic Fallback Cascading**: Updated fallback waterfall prioritizing the latest Gemini 3 candidates when active endpoints return 404 or unavailable errors.
+
+#### 2. Transparent Default Migration & Configuration Sanitization
+- **Automatic Settings Migration**: Existing user configurations in `localStorage` referencing legacy (1.x, 2.x) or discontinued model identifiers are transparently migrated to `gemini-3.5-flash-lite` on initial application boot.
+- **Cross-Provider Configuration Sanitization**: Local model strings (e.g. Ollama tags like `llama3:latest` or `deepseek-r1:8b`) inadvertently stored in cloud settings are sanitized and safely reset to defaults, preventing malformed cloud API dispatches.
+
+#### 3. Thinking / Reasoning Level Selector
+- **Granular Cognitive Budget Control**: Added an interactive segmented control in the Settings drawer to configure internal reasoning depth:
+  - **Auto**: Dynamic runtime-adapted token budget (default).
+  - **Low**: 1,024 reasoning tokens.
+  - **Medium**: 4,096 reasoning tokens.
+  - **High**: 8,192 reasoning tokens.
+  - **Off**: 0 tokens (disables reasoning tokens for instant low-latency output).
+- **Universal Provider Compatibility**: Fully wired into `@google/generative-ai` inference generation configs (`thinkingConfig: { thinkingBudget }`).
+
+#### 4. Local Git Hooks & Pre-Stage Security Governance
+- **Automated Local Hook Setup**: Implemented `.githooks/pre-commit` managed via `core.hooksPath = .githooks`.
+- **Author Identity Validation**: Ensures commits match authorized repository maintainers (`MaskirovkaOtdel` / `thod.efstathiadis@gmail.com`).
+- **Pre-Stage Leak Prevention**: Scans staged file diffs against sensitive patterns (`\.env`, `secret`, `credentials`, `license-key`, `id_rsa`, `\.pem`), immediately rejecting unauthorized stages.
+
+#### 5. Terminal Log Processing & Performance Optimizations
+- **Enhanced ANSI Stripper**: Strips 16/256/24-bit TrueColor sequences and OSC terminal control codes with zero memory leaks.
+- **Noise Reduction & Frame Collapsing**: Automatically cleans container hashes, syslog timestamps, and collapses recursive stack trace repetitions, reducing token consumption while preserving critical root-cause context.
+- **Optimized Bundles & PWA Shell**: Streamlined production asset bundles with offline service worker precaching.
+
+---
+
 ## CrypticMechanic v1.4.1
 
 ### Milestone Overview

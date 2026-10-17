@@ -27,9 +27,9 @@ function main() {
   const latestTag = allTags[0] || '';
   console.log(`Latest detected tag: ${latestTag || 'None'}`);
 
-  // 2. Fetch commits since latest tag
+  // 2. Fetch commits since latest tag (filtering merge commits to avoid changelog pollution)
   const gitRange = latestTag ? `${latestTag}..HEAD` : 'HEAD';
-  const rawCommits = run(`git log ${gitRange} --pretty=format:"%h%x1f%s%x1f%b%x1e"`);
+  const rawCommits = run(`git log ${gitRange} --no-merges --pretty=format:"%h%x1f%s%x1f%b%x1e"`);
 
   if (!rawCommits) {
     console.log('No commits found in range. Skipping release.');
@@ -47,7 +47,7 @@ function main() {
         body: (parts[2] || '').trim(),
       };
     })
-    .filter(c => c.subject.length > 0);
+    .filter(c => c.subject.length > 0 && !/^Merge (pull request|branch)/i.test(c.subject));
 
   console.log(`Analyzed ${commits.length} commit(s) since last tag.`);
 
@@ -150,6 +150,25 @@ function main() {
 
   fs.writeFileSync('RELEASE_CHANGELOG.md', releaseNotes);
   console.log('Generated RELEASE_CHANGELOG.md');
+
+  // 7. Prepend release section to RELEASE_NOTES.md
+  if (fs.existsSync('RELEASE_NOTES.md')) {
+    let notesContent = fs.readFileSync('RELEASE_NOTES.md', 'utf-8');
+    const versionHeader = `## CrypticMechanic v${nextVersion}`;
+    if (!notesContent.includes(versionHeader)) {
+      const headerPattern = /^# Release Notes — CrypticMechanic\s*\n\s*---\s*\n/m;
+      const bodyContent = releaseNotes.replace(/^## What's Changed in [^\n]+\n\n/, '');
+      const newSection = `## CrypticMechanic v${nextVersion}\n\n${bodyContent}\n---\n\n`;
+
+      if (headerPattern.test(notesContent)) {
+        notesContent = notesContent.replace(headerPattern, `$&${newSection}`);
+      } else {
+        notesContent = `# Release Notes — CrypticMechanic\n\n---\n\n${newSection}${notesContent}`;
+      }
+      fs.writeFileSync('RELEASE_NOTES.md', notesContent);
+      console.log('Successfully updated RELEASE_NOTES.md with new release section');
+    }
+  }
 
   setOutput('should_release', 'true');
   setOutput('bump_type', bumpType);
